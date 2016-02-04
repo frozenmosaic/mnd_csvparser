@@ -1,0 +1,13 @@
+{
+    "require": {
+       "parsecsv/php-parsecsv": "0.4.5",
+        "codeception/codeception": "*"
+    },
+
+    "autoload": {
+          "psr-4": {
+              "Parser\\": "app/"
+          }
+      }
+
+}

@@ -1,0 +1,11 @@
+Hi,
+
+I'm writing a small script to parse CSV information and store it in a database.
+I'm not using any framework since this is a small project, but I use Codeception to test my code.
+
+Basically what my class Parser does is parsing data from a CSV file, process the data (put it more neatly into arrays) and insert that data.
+
+I wrote the class
+
+
+
