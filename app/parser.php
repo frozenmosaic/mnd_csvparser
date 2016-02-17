@@ -20,15 +20,17 @@ class Parser
     public $csv_data;
     public $csv_mod;
 
-    private $inserted_group = array();
+    private $inserted_group = array(); // used for both menu groups and modifier groups
     private $inserted_cat   = array();
     private $inserted_item  = array();
     private $inserted_size  = array();
 
     private $group_id = array();
     private $cat_id   = array();
-    public $item_id   = array();
-    public $size_id   = array();
+    private $item_id   = array();
+    private $size_id   = array();
+
+    private $modgroup_id = array();
 
     public function __construct()
     {
@@ -73,19 +75,101 @@ class Parser
         $this->getCSVData();
         $this->connectDtb();
 
-        $this->insert();
+        // $this->insertMenu();
+        $this->insertMods();
+    }
+
+    public function insertMods()
+    {
+        $count = count($this->csv_mod);
+
+        for ($i = 0; $i < $count; $i++) {
+            $row = $this->csv_mod[$i];
+
+            // insert mod groups
+            if (!in_array($row['Name'], $this->inserted_group)) {
+
+
+                $stmt = $this->dbo->prepare(
+                    "INSERT INTO `cs_toppinggroup`
+                        (
+                        `toppinggroupname`,
+                        `mintop`,
+                        `maxtop`,
+                        `group_type`
+                        )
+                    VALUES 
+                        (
+                        :name,
+                        :min,
+                        :max,
+                        :type
+                        )
+                ");
+
+                $name = $row['Name'];
+                $min = $row['Min'];
+                $max = $row['Max'];
+                $type = $row['Type'];
+
+                $stmt->bindParam(':name', $name);
+                $stmt->bindParam(':min', $min);
+                $stmt->bindParam(':max', $max);
+                $stmt->bindParam(':type', $type);
+
+                $stmt->execute();
+                $this->inserted_group[] = $name;
+                $this->modgroup_id[$name] = $this->dbo->lastInsertId();
+            }
+
+            // insert mod items
+            
+            $query = 
+            "INSERT INTO `cs_toppingitems`
+                (
+                `toppingroupid`,
+                `toppingitemname`,
+                `toppingitemprice`,
+                `left_price`,
+                `whole_price`,
+                `right_price`
+                )
+            VALUES 
+                (
+                :groupid,
+                :name,
+                :price,
+                :left,
+                :whole,
+                :right
+                )
+            ";
+
+            $stmt = $this->dbo->prepare($query);
+
+            $groupid = $this->modgroup_id[$row['Name']];
+            $name = $row['Item'];
+            $price = $row['Price'];
+
+
+            $stmt->bindParam(':groupid', $groupid);
+            $stmt->bindParam(':name', $name);
+            $stmt->bindParam(':price', $price);
+            $stmt->bindParam(':left', $left);
+            $stmt->bindParam(':right', $right);  
+            $stmt->bindParam(':whole', $whole); 
+
+            $stmt->execute();
+        }
     }
 
     /**
      * Insert data into database using raw csv data, row by row
      * @return [void]
      */
-    public function insert()
+    public function insertMenu()
     {
         $count = count($this->csv_data);
-
-        $cat_sizes = array();
-        $sizes     = array();
 
         for ($i = 0; $i < $count; $i++) {
             $row = $this->csv_data[$i]; // array of values for each csv data row
@@ -165,7 +249,7 @@ class Parser
             $sizename = !empty($row['Size Names']) ? $row['Size Names'] : 'size1';
             $cat      = $row['Category'];
             $cat_id   = $this->cat_id[$cat];
-             $str = $sizename . $cat;
+            $str      = $sizename . $cat;
             if (!in_array($str, $this->inserted_size)) {
                 $stmt = $this->dbo->prepare(
                     "INSERT INTO `cs_categorysize`
@@ -225,7 +309,7 @@ class Parser
             }
 
             $sizeid = $this->size_id[$str];
-            $price = $row['Price'];
+            $price  = $row['Price'];
 
             $stmt = $this->dbo->prepare($query);
             $stmt->bindParam(':itemid', $itemid);
@@ -234,5 +318,13 @@ class Parser
 
             $stmt->execute();
         }
+
+        $this->inserted_group = array();
+        $this->inserted_cat   = array();
+        $this->inserted_item  = array();
+        $this->inserted_size  = array();
+
     }
+
+    
 }

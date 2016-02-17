@@ -18,6 +18,5 @@ class Test extends \PHPUnit_Framework_TestCase
         $parser = new Parser();
 
         $parser->run();
-        // $parser->insertCategories();
     }
 }

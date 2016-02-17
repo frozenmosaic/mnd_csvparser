@@ -59,6 +59,8 @@ _tasks_
 CSV FORMAT
 **assumptions**
 * no location will have duplicate menu groups, menu categories and menu items
+* no location will have duplicate modifier groups
+* csv files from clients have to adopt the exact format
 
 
 
