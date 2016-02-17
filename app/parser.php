@@ -1,51 +1,57 @@
 <?php
 namespace Parser;
 
-include '/Users/VyHuynh/Desktop/MenuDrive/vendor/parsecsv/php-parsecsv/parsecsv.lib.php';
+include '/Users/VyHuynh/Sites/MenuDrive/vendor/parsecsv/php-parsecsv/parsecsv.lib.php';
 
 // include dirname('/vendor/autoload.php');
 
-class Parser {
+class Parser
+{
 
-    public $csvfile_name = 'csv-format.csv';
-    public $parseCSV;
+    private $csv_file       = 'csv-format.csv';
+    private $modifiers_file = 'modifiers.csv';
 
-    public $dbo;
+    private $parseCSV;
+    private $parseCSV_mod;
 
-    public $csv_cols;
+    private $dbo;
+
+    private $csv_cols;
     public $csv_data;
-    public $result;
+    public $csv_mod;
 
-    public $table_group = 'cs_menugroup';
+    private $inserted_group = array();
+    private $inserted_cat   = array();
+    private $inserted_item  = array();
+    private $inserted_size  = array();
 
-    public function __construct() {
-        $this->parseCSV = new \parseCSV($this->csvfile_name);
+    private $group_id = array();
+    private $cat_id   = array();
+    public $item_id   = array();
+    public $size_id   = array();
+
+    public function __construct()
+    {
+        $this->parseCSV     = new \parseCSV($this->csv_file);
+        $this->parseCSV_mod = new \parseCSV($this->modifiers_file);
 
         $this->csv_cols = array('Group', 'Category', 'Item');
     }
 
-    public function run() {
-        $this->createResultArrays();
-        $this->getCSVData();
-
-        $this->connectDtb();
-
-        $this->processData();
-        $this->insertCategories();
-    }
-
-    public function createResultArrays() {
-         foreach ($this->csv_cols as $value) {
-            $this->result[$value] = array();
+    public function createResultArrays()
+    {
+        foreach ($this->csv_cols as $value) {
+            $this->csv_processed[$value] = array();
         }
     }
 
-    public function connectDtb() {
+    public function connectDtb()
+    {
         // connect to dtb
-        try {
-        $this->dbo = new \PDO("mysql:host=localhost;dbname=menudrive", "root", "vy");            
-        } 
-        catch (PDOException $e) {
+        try
+        {
+            $this->dbo = new \PDO("mysql:host=localhost;dbname=menudrive", "root", "vy");
+        } catch (PDOException $e) {
             $e->getMessage();
         }
 
@@ -53,80 +59,180 @@ class Parser {
 
     /**
      * Parse CSV out of CSV files and store raw CSV data in class field $csv_data
-     * @return [void] 
+     * @return [void]
      */
-    public function getCSVData() {
+    public function getCSVData()
+    {
         $this->csv_data = $this->parseCSV->data;
-        // print_r($this->csv_data);
+        $this->csv_mod  = $this->parseCSV_mod->data;
+    }
+
+    public function run()
+    {
+        $this->createResultArrays();
+        $this->getCSVData();
+        $this->connectDtb();
+
+        $this->insert();
     }
 
     /**
-    * Processing CSV data and store data in field $result
-    * Assuming that CSV data will have format Group - Category - Item
-    * @return [void]       
-    */
-    public function processData() {
-        $count = count($this->csv_data); // number of lines
-        
-        // loop through each row
-        for ($i = 0; $i < $count; $i++) {
-            $row = $this->csv_data[$i]; // array of values for each row
+     * Insert data into database using raw csv data, row by row
+     * @return [void]
+     */
+    public function insert()
+    {
+        $count = count($this->csv_data);
 
-            foreach ($this->csv_cols as $value) {
-                if (!(empty($row[$value]))) {
-                    $arr = $this->result[$value];
-                    $arr[] = $row[$value];
-                    $this->result[$value] = $arr;
-                }
+        $cat_sizes = array();
+        $sizes     = array();
+
+        for ($i = 0; $i < $count; $i++) {
+            $row = $this->csv_data[$i]; // array of values for each csv data row
+
+            // insert menu group
+            $value = 'Group';
+            if (!in_array($row[$value], $this->inserted_group)) {
+
+                $stmt = $this->dbo->prepare(
+                    "INSERT INTO `cs_menugroup`
+                        (`menugroupname`)
+                    VALUES (:name)"
+                );
+                $stmt->bindParam(':name', $row[$value]);
+
+                $stmt->execute();
+
+                $this->inserted_group[] = $row[$value];
+
+                $this->group_id[$row[$value]] = $this->dbo->lastInsertId();
 
             }
-        }
-    }
 
-    // public function insertData() {
-    //     // $this->insertGroups();
-    //     $this->insertCategories();
-    // }
+            // insert menu category
+            $value = 'Category';
+            if (!in_array($row[$value], $this->inserted_cat)) {
 
-    public function insertGroups() {
+                $stmt = $this->dbo->prepare(
+                    "INSERT INTO `cs_menucategory`
+                        (
+                        `menugroupid`,
+                        `categoryname`
+                        )
+                    VALUES
+                        (
+                        :groupid,
+                        :name)"
+                );
+                $stmt->bindParam(':name', $row[$value]);
+                $id = $this->group_id[$row['Group']];
+                $stmt->bindParam(':groupid', $id);
 
-        // prepare statement
-        $stmt = $this->dbo->prepare("INSERT INTO `cs_menugroup` (`menugroupid`, `locationid`, `menugroupname`) VALUES (:menugroupid, :locationid, :menugroupname)");
-        // `description`, `sequenceorder`, `status`, `no_of_different_items`, `is_dedicated`, `is_default`, `is_visible`
-        $stmt->bindParam(':menugroupid', $menugroupid);
-        $stmt->bindParam(':menugroupname', $menugroupname);
-        $stmt->bindParam(':locationid', $locationid);
-       
-        // prepare parameters
+                $stmt->execute();
 
-        $groups = $this->result['Group'];
-        for ($i = 0; $i < count($groups); $i++) {
-            $menugroupid = $i+1;
-            $locationid = $i+1;
-            $menugroupname = $groups[$i];
+                $this->inserted_cat[]       = $row[$value];
+                $this->cat_id[$row[$value]] = $this->dbo->lastInsertId();
 
-            // execute statement
+            }
+
+            // insert menu item
+            $value = 'Item';
+            if (!in_array($row[$value], $this->inserted_item)) {
+                $stmt = $this->dbo->prepare(
+                    "INSERT INTO `cs_menuitem`
+                    (
+                    `catid`,
+                    `itemname`
+                    )
+                VALUES
+                    (
+                    :catid,
+                    :itemname
+                    )
+                ");
+                $stmt->bindParam(':itemname', $row[$value]);
+                $catid = $this->cat_id[$row['Category']];
+                $stmt->bindParam(':catid', $catid);
+
+                $stmt->execute();
+
+                $this->inserted_item[]       = $row[$value];
+                $this->item_id[$row[$value]] = $this->dbo->lastInsertId();
+            }
+
+            // insert category size
+            $size     = $row['Size'];
+            $sizename = !empty($row['Size Names']) ? $row['Size Names'] : 'size1';
+            $cat      = $row['Category'];
+            $cat_id   = $this->cat_id[$cat];
+             $str = $sizename . $cat;
+            if (!in_array($str, $this->inserted_size)) {
+                $stmt = $this->dbo->prepare(
+                    "INSERT INTO `cs_categorysize`
+                                (
+                                `categoryid`,
+                                `sizename`
+                                )
+                            VALUES
+                                (
+                                :catid,
+                                :sizename
+                                )
+                            ");
+                $stmt->bindParam(':catid', $cat_id);
+
+                $stmt->bindParam(':sizename', $sizename);
+
+                $stmt->execute();
+
+                $this->inserted_size[] = $str;
+                $this->size_id[$str]   = $this->dbo->lastInsertId();
+            }
+
+            // insert price
+            $query =
+                "INSERT INTO `cs_price`
+                (
+                `itemid`,
+                `sizeid`,
+                `price`
+                )
+            VALUES
+                (
+                :itemid,
+                :sizeid,
+                :price
+                )
+            ";
+
+            $item   = $row['Item'];
+            $itemid = $this->item_id[$item];
+
+            $size     = $row['Size'];
+            $sizename = $row['Size Names'];
+            $cat      = $row['Category'];
+
+            if ($size == 1) {
+                $str = 'size1' . $cat;
+            } elseif (empty($size)) {
+                if (empty($sizename)) {
+                    $str = 'size1' . $cat;
+                } else {
+                    $str = $sizename . $cat;
+                }
+            } elseif ($size > 1) {
+                $str = $sizename . $cat;
+            }
+
+            $sizeid = $this->size_id[$str];
+            $price = $row['Price'];
+
+            $stmt = $this->dbo->prepare($query);
+            $stmt->bindParam(':itemid', $itemid);
+            $stmt->bindParam(':sizeid', $sizeid);
+            $stmt->bindParam(':price', $price);
+
             $stmt->execute();
-        }
-    }
-
-    public function insertCategories() {
-        // prepare statement
-        
-        codecept_debug('running insertCategories');
-        $stmt = $this->dbo->prepare("INSERT INTO `cs_menucategory` (`catid`, `menugroupid`, `categoryname`) VALUES (:catid, :menugroupid, :categoryname)");
-
-        // prepare parameters
-        $cats = $this->result['Category'];
-        for ($i = 0; $i < count($cats); $i++) {
-            $params = array();
-            $params['menugroupid'] = $i+1;
-            $params['catid'] = $i+1;
-            $params['categoryname'] = $cats[$i];
-
-            // execute statement
-            $stmt->execute($params);
-            print_r('inserted one value***');
         }
     }
 }
