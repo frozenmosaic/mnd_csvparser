@@ -4,4 +4,6 @@ include "parser.php";
 
 $parser = new Parser\Parser();
 $parser->run();
-print_r('done');
+print_r("<pre>");
+
+print_r("</pre>");

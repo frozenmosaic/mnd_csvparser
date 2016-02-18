@@ -3,8 +3,6 @@ namespace Parser;
 
 include '/Users/VyHuynh/Sites/MenuDrive/vendor/parsecsv/php-parsecsv/parsecsv.lib.php';
 
-// include dirname('/vendor/autoload.php');
-
 class Parser
 {
 
@@ -20,15 +18,16 @@ class Parser
     public $csv_data;
     public $csv_mod;
 
-    private $inserted_group = array(); // used for both menu groups and modifier groups
-    private $inserted_cat   = array();
-    private $inserted_item  = array();
-    private $inserted_size  = array();
+    private $inserted_group   = array(); // used for both menu groups and modifier groups
+    private $inserted_cat     = array();
+    private $inserted_item    = array();
+    private $inserted_size    = array();
+    private $inserted_moditem = array();
 
     private $group_id = array();
     private $cat_id   = array();
-    private $item_id   = array();
-    private $size_id   = array();
+    private $item_id  = array();
+    private $size_id  = array();
 
     private $modgroup_id = array();
 
@@ -75,20 +74,30 @@ class Parser
         $this->getCSVData();
         $this->connectDtb();
 
-        // $this->insertMenu();
+        $this->insertMenu();
         $this->insertMods();
     }
 
     public function insertMods()
     {
-        $count = count($this->csv_mod);
+        $count        = count($this->csv_mod);
+        $topping_item = array();
 
         for ($i = 0; $i < $count; $i++) {
-            $row = $this->csv_mod[$i];
+            $row   = $this->csv_mod[$i];
+            $name  = $row['Name'];
+            $min   = $row['Min'];
+            $max   = $row['Max'];
+            $type  = $row['Type'];
+            $item  = $row['Item'];
+            $price = $row['Price'];
+            $left  = $row['1st'];
+            $whole = $row['2nd'];
+            $right = $row['3rd'];
 
+            $topping_item[$name] = $type;
             // insert mod groups
             if (!in_array($row['Name'], $this->inserted_group)) {
-
 
                 $stmt = $this->dbo->prepare(
                     "INSERT INTO `cs_toppinggroup`
@@ -98,7 +107,7 @@ class Parser
                         `maxtop`,
                         `group_type`
                         )
-                    VALUES 
+                    VALUES
                         (
                         :name,
                         :min,
@@ -107,59 +116,89 @@ class Parser
                         )
                 ");
 
-                $name = $row['Name'];
-                $min = $row['Min'];
-                $max = $row['Max'];
-                $type = $row['Type'];
-
                 $stmt->bindParam(':name', $name);
                 $stmt->bindParam(':min', $min);
                 $stmt->bindParam(':max', $max);
                 $stmt->bindParam(':type', $type);
 
                 $stmt->execute();
-                $this->inserted_group[] = $name;
+                $this->inserted_group[]   = $name;
                 $this->modgroup_id[$name] = $this->dbo->lastInsertId();
             }
 
             // insert mod items
-            
-            $query = 
-            "INSERT INTO `cs_toppingitems`
-                (
-                `toppingroupid`,
-                `toppingitemname`,
-                `toppingitemprice`,
-                `left_price`,
-                `whole_price`,
-                `right_price`
-                )
-            VALUES 
-                (
-                :groupid,
-                :name,
-                :price,
-                :left,
-                :whole,
-                :right
-                )
-            ";
+            if (!in_array($item, $this->inserted_moditem)) {
+                $groupid = $this->modgroup_id[$name];
+                $query   =
+                    "INSERT INTO `cs_toppingitems`
+                        (
+                        `toppinggroupid`,
+                        `toppingitemname`,
+                        `toppingitemprice`
+                        )
+                    VALUES
+                        (
+                        :groupid,
+                        :name,
+                        :price
+                        )
+                    ";
 
-            $stmt = $this->dbo->prepare($query);
+                $stmt = $this->dbo->prepare($query);
 
-            $groupid = $this->modgroup_id[$row['Name']];
-            $name = $row['Item'];
-            $price = $row['Price'];
+                $stmt->bindParam(':groupid', $groupid);
+                $stmt->bindParam(':name', $item);
+                $stmt->bindParam(':price', $price);
 
+                $stmt->execute();
+                $this->inserted_moditem[] = $item;
 
-            $stmt->bindParam(':groupid', $groupid);
-            $stmt->bindParam(':name', $name);
-            $stmt->bindParam(':price', $price);
-            $stmt->bindParam(':left', $left);
-            $stmt->bindParam(':right', $right);  
-            $stmt->bindParam(':whole', $whole); 
+            }
 
-            $stmt->execute();
+            if ($topping_item[$name] == 'Custom' || $topping_item[$name] = 'Pizza') {
+                if (is_numeric($left) && is_numeric($whole) && is_numeric($right)) {
+                    $query =
+                        "UPDATE `cs_toppingitems`
+                        SET `left_price` = $left,
+                            `whole_price`= $whole,
+                            `right_price` = $right
+                        WHERE `toppingitemname` = '$item'
+                                AND `toppinggroupid` = $groupid
+                    ";
+
+                    
+                    $stmt = $this->dbo->prepare($query);
+                    $stmt->execute();
+                }
+
+            }
+
+            if ($topping_item[$name] == 'Custom') {
+                $query =
+                    "INSERT INTO `cs_custom_topping_labels`
+                            (
+                            `topping_group_id`,
+                            `topping_label`
+                            )
+                        VALUES
+                            (
+                            :groupid,
+                            :label
+                            )
+                        ";
+
+                $stmt = $this->dbo->prepare($query);
+
+                $labels = array($left, $whole, $right);
+                $stmt->bindParam(':groupid', $groupid);
+
+                foreach ($labels as $value) {
+                    $stmt->bindParam(':label', $value);
+                    $stmt->execute();
+                }
+
+            }
+
         }
     }
 
@@ -201,16 +240,21 @@ class Parser
                     "INSERT INTO `cs_menucategory`
                         (
                         `menugroupid`,
-                        `categoryname`
+                        `categoryname`,
+                        `size`
                         )
                     VALUES
                         (
                         :groupid,
-                        :name)"
+                        :name,
+                        :size
+                        )"
                 );
                 $stmt->bindParam(':name', $row[$value]);
+
                 $id = $this->group_id[$row['Group']];
                 $stmt->bindParam(':groupid', $id);
+                $stmt->bindParam(':size', $row['Size']);
 
                 $stmt->execute();
 
@@ -250,6 +294,7 @@ class Parser
             $cat      = $row['Category'];
             $cat_id   = $this->cat_id[$cat];
             $str      = $sizename . $cat;
+
             if (!in_array($str, $this->inserted_size)) {
                 $stmt = $this->dbo->prepare(
                     "INSERT INTO `cs_categorysize`
@@ -326,5 +371,4 @@ class Parser
 
     }
 
-    
 }
