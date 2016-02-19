@@ -55,6 +55,11 @@ _tasks_
     if not: 
     unique menugroupid 
 
+### Fri, Feb 19, 2016
+# validating data
+unwanted commas
+empty names
+
 -/-
 CSV FORMAT
 **assumptions**
