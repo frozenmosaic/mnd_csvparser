@@ -59,6 +59,8 @@ _tasks_
 # validating data
 unwanted commas
 empty names
+format errors:
+    size 1.2 => still gets imported as 1
 
 -/-
 CSV FORMAT

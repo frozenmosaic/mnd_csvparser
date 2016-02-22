@@ -16,6 +16,8 @@ class Parser
 
     private $location_id = 842;
 
+    private $errors = array();
+
     public $csv_data;
     public $csv_mod;
 
@@ -29,7 +31,6 @@ class Parser
     private $cat_id   = array();
     private $item_id  = array();
     private $size_id  = array();
-
     private $modgroup_id = array();
 
     public function __construct()
@@ -37,13 +38,6 @@ class Parser
         $this->parseCSV     = new \parseCSV($this->csv_file);
         $this->parseCSV_mod = new \parseCSV($this->modifiers_file);
 
-    }
-
-    public function createResultArrays()
-    {
-        foreach ($this->csv_cols as $value) {
-            $this->csv_processed[$value] = array();
-        }
     }
 
     public function connectDtb()
@@ -89,19 +83,25 @@ class Parser
     public function validateData($data)
     {
         // unwanted commas
+        
+
+        
         // empty names: [menu] group, category, item; [mod] name, item
+
+        print_r("<pre>");
+        print_r($data);
+        print_r("</pre>");
     }
 
     public function run()
     {
-        $this->createResultArrays();
         $this->getCSVData();
         $this->connectDtb();
-
-        if (validateData($this->csv_data)) {
+        $this->validateData($this->csv_data);
+        // if (validateData($this->csv_data)) {
             $this->insertMenu();
             // $this->insertMods();
-        }
+        // }
     }
 
     public function insertMods()
@@ -285,9 +285,10 @@ class Parser
 
             // insert menu category
             $cat = $row['Category'];
+            $size = $row['Size'];
             if (!in_array($cat, $this->inserted_cat)) {
 
-                $stmt = $this->dbo->prepare(
+                $query =
                     "INSERT INTO `cs_menucategory`
                         (
                         `menugroupid`,
@@ -300,15 +301,17 @@ class Parser
                         :name,
                         :size
                         )"
-                );
+                ;
+
+                $stmt = $this->dbo->prepare($query);
                 $stmt->bindParam(':name', $cat);
 
                 $id = $this->group_id[$group];
                 $stmt->bindParam(':groupid', $id);
-                $stmt->bindParam(':size', $row['Size']);
+                $stmt->bindParam(':size', $size);
 
                 $stmt->execute();
-
+                print_r($query);
                 $this->inserted_cat[]       = $cat;
                 $this->cat_id[$cat] = $this->dbo->lastInsertId();
 
