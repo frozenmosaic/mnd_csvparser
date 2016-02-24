@@ -16,7 +16,9 @@ class Parser
 
     private $location_id = 842;
 
-    private $errors = array();
+    public $menu_errors = array();
+    public $mod_errors  = array();
+    public $status      = array('Errors', 'Successfully Inserted');
 
     public $csv_data;
     public $csv_mod;
@@ -27,10 +29,10 @@ class Parser
     private $inserted_size    = array();
     private $inserted_moditem = array();
 
-    private $group_id = array();
-    private $cat_id   = array();
-    private $item_id  = array();
-    private $size_id  = array();
+    private $group_id    = array();
+    private $cat_id      = array();
+    private $item_id     = array();
+    private $size_id     = array();
     private $modgroup_id = array();
 
     public function __construct()
@@ -53,7 +55,7 @@ class Parser
     }
 
     /**
-     * Parse CSV out of CSV files and 
+     * Parse CSV out of CSV files and
      * store raw CSV data in class field $csv_data
      * @return [void]
      */
@@ -62,46 +64,118 @@ class Parser
         $this->csv_data = $this->parseCSV->data;
         $this->csv_mod  = $this->parseCSV_mod->data;
 
-        // remove empty rows
-        foreach ($this->csv_data as $key => $row) {
-            $empty = true;
+    }
 
-            foreach ($row as $elem) {
-                if ($elem != "") {
-                    $empty = false;
+    public function validateMenu()
+    {
+        $valid  = true;
+        $data   = $this->csv_data;
+        $errors = $this->menu_errors;
+
+        // remove empty rows and check for empty values in: [menu] group, category, item; [mod] name, item
+
+        foreach ($data as $index => $row) {
+            $emptyElems  = 0;
+            $temp_errors = array();
+            foreach ($row as $key => $elem) {
+                if (empty($elem)) {
+                    $emptyElems++;
+                    if ($key == 'Group' || $key == 'Category' || $key == 'Item') {
+                        $temp_errors[] = $key;
+                    }
                 }
             }
 
-            if ($empty) {
-                unset($this->csv_data[$key]);
+            if ($emptyElems == count($row)) {
+                unset($data[$index]);
+            } elseif ($emptyElems > 0 && count($temp_errors)) {
+                $valid          = false;
+                $errors[$index] = $temp_errors;
             }
         }
 
-        $this->csv_data = array_values($this->csv_data);
+        $data = array_values($data);
+
+        $this->csv_data    = $data;
+        $this->menu_errors = $errors;
+
+        return $valid;
     }
 
-    public function validateData($data)
+    public function validateMods()
     {
-        // unwanted commas
-        
+        $valid  = true;
+        $data   = $this->csv_mod;
+        $errors = $this->mod_errors;
 
-        
-        // empty names: [menu] group, category, item; [mod] name, item
+        // remove empty rows and check for empty values in: [mod] group, item
 
-        print_r("<pre>");
-        print_r($data);
-        print_r("</pre>");
+        foreach ($data as $index => $row) {
+            $emptyElems  = 0;
+            $temp_errors = array();
+            foreach ($row as $key => $elem) {
+                if (empty($elem)) {
+                    $emptyElems++;
+                    if ($key == 'Group' || $key == 'Item') {
+                        $temp_errors[] = $key;
+                    }
+                }
+            }
+
+            if ($emptyElems == count($row)) {
+                unset($data[$index]);
+            } elseif ($emptyElems > 0 && count($temp_errors)) {
+                $valid          = false;
+                $errors[$index] = $temp_errors;
+            }
+        }
+
+        $data = array_values($data);
+
+        $this->csv_mod    = $data;
+        $this->mod_errors = $errors;
+
+        return $valid;
+
+    }
+
+    public function printErrorsMenu()
+    {
+        print_r("For Menu CSV File: <br/>");
+        foreach ($this->menu_errors as $key => $value) {
+            foreach ($value as $elem) {
+                print_r("Empty value " . $elem . " for row " . ($key + 1) . ". <br/>");
+            }
+        }
+    }
+
+    public function printErrorsMods()
+    {
+        print_r("For Modifier CSV File: <br/>");
+        foreach ($this->mod_errors as $key => $value) {
+            foreach ($value as $elem) {
+                print_r("Empty value " . $elem . " for row " . ($key + 1) . ". <br/>");
+            }
+        }
     }
 
     public function run()
     {
         $this->getCSVData();
         $this->connectDtb();
-        $this->validateData($this->csv_data);
-        // if (validateData($this->csv_data)) {
+        if ($this->validateMenu()) {
             $this->insertMenu();
-            // $this->insertMods();
-        // }
+            print_r("Successfully Inserted Menu <br/>");
+        } else {
+            $this->printErrorsMenu();
+        }
+
+        if ($this->validateMods()) {
+            $this->insertMods();
+            print_r("Successfully Inserted Modifiers");
+        } else {
+            $this->printErrorsMods();
+        }
     }
 
     public function insertMods()
@@ -111,7 +185,7 @@ class Parser
 
         for ($i = 0; $i < $count; $i++) {
             $row   = $this->csv_mod[$i];
-            $name  = $row['Name'];
+            $name  = $row['Group'];
             $min   = $row['Min'];
             $max   = $row['Max'];
             $type  = $row['Type'];
@@ -284,7 +358,7 @@ class Parser
             }
 
             // insert menu category
-            $cat = $row['Category'];
+            $cat  = $row['Category'];
             $size = $row['Size'];
             if (!in_array($cat, $this->inserted_cat)) {
 
@@ -311,9 +385,9 @@ class Parser
                 $stmt->bindParam(':size', $size);
 
                 $stmt->execute();
-                print_r($query);
-                $this->inserted_cat[]       = $cat;
-                $this->cat_id[$cat] = $this->dbo->lastInsertId();
+
+                $this->inserted_cat[] = $cat;
+                $this->cat_id[$cat]   = $this->dbo->lastInsertId();
 
             }
 
@@ -338,8 +412,8 @@ class Parser
 
                 $stmt->execute();
 
-                $this->inserted_item[]       = $item;
-                $this->item_id[$item] = $this->dbo->lastInsertId();
+                $this->inserted_item[] = $item;
+                $this->item_id[$item]  = $this->dbo->lastInsertId();
             }
 
             // insert category size
