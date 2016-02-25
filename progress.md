@@ -70,7 +70,9 @@ separate two parsers for mods and menu
 -/-
 CSV FORMAT
 **assumptions**
-* no location will have duplicate menu groups, menu categories and menu items
+* no location will have duplicate menu groups
+* no menu groups will have duplicate menu categories. however, a location can have duplicate menu categories.
+* no menu categories will have duplicate menu items. however, a location and a menu group can have duplicate menu items, as long as they have different menu categories.
 * no location will have duplicate modifier groups
 * csv files from clients have to adopt the exact format
 

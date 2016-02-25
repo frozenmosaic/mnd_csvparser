@@ -1,20 +1,123 @@
 <?php
 namespace Parser;
 
-include 'csvparser.php';
+include '/Users/VyHuynh/Sites/MenuDrive/vendor/parsecsv/php-parsecsv/parsecsv.lib.php';
 
-/**
- * Subclass for parsing modifiers CSV data
- * @author Vy Huynh
- */
-class ModsParser extends CSVParser
+class ModsParser
 {
 
-    protected $location_id = 842;
+    private $parseCSV;
+
+    private $dbo;
+
+    private $location_id = 842;
+
+    public $errors  = array();
+    public $errors_code = array();
+    public $errors_msg  = array(
+        1 => 'Empty Data',
+        2 => 'Empty Important Values',
+    );
+    public $csv_data;
+
+    private $inserted_group = array(); 
+    private $inserted_item  = array();
+
+    private $group_id    = array();
+    private $item_id     = array();
 
     public function __construct($file)
     {
-    	parent::__construct($file);
+    	if (is_file($file)) {
+            $this->parseCSV = new \parseCSV($file);
+            $this->run();
+        } else {
+            print_r("Unable to open file.");
+        }
+    }
+
+    public function getCSVData()
+    {
+        $this->csv_data = $this->parseCSV->data;
+    }
+
+    public function run()
+    {
+        $this->getCSVData();
+        $this->connectDtb();
+
+        if ($this->validate()) {
+            $this->insert();
+            print_r("Successfully inserted modifiers. <br/>");
+        } else {
+            $this->printErrors();
+        }
+    }
+
+    public function connectDtb()
+    {
+        // connect to dtb
+        try
+        {
+            $this->dbo = new \PDO("mysql:host=localhost;dbname=menudrive", "root", "vy");
+        } catch (PDOException $e) {
+            $e->getMessage();
+        }
+    }
+
+    public function validate()
+    {
+        $valid  = true;
+        $data   = $this->csv_data;
+        $errors = $this->errors;
+
+        // remove empty rows and check for empty values in: [mod] group, item
+        $numRows   = count($data);
+        $emptyRows = 0;
+        foreach ($data as $index => $row) {
+            $emptyElems  = 0;
+            $temp_errors = array();
+            foreach ($row as $key => $elem) {
+                if (empty($elem)) {
+                    $emptyElems++;
+                    if ($key == 'Group' || $key == 'Item') {
+                        $temp_errors[] = $key;
+                    }
+                }
+            }
+
+            if ($emptyElems == count($row)) {
+                $emptyRows++;
+                unset($data[$index]);
+            } elseif ($emptyElems > 0 && count($temp_errors)) {
+                $valid               = false;
+                $this->errors_code[] = 2;
+                $errors[$index]      = $temp_errors;
+            }
+        }
+
+        if ($emptyRows == count($row)) {
+            $valid               = false;
+            $this->errors_code[] = 1;
+        }
+
+        $data = array_values($data);
+
+        $this->csv_data    = $data;
+        $this->errors = $errors;
+
+        return $valid;
+
+    }
+
+    public function printErrors()
+    {
+        print_r("For Modifier CSV File: <br/>");
+        foreach ($this->errors as $key => $value) {
+            foreach ($value as $elem) {
+                print_r("Empty value " . $elem . " for row " . ($key + 1) . ". <br/>");
+            }
+        }
     }
 
     public function insert()
