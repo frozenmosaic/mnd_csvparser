@@ -62,6 +62,11 @@ empty names
 format errors:
     size 1.2 => still gets imported as 1
 
+### Wed, Feb 24
+added two upload forms
+
+add a validation gate for empty csv data/empty file
+separate two parsers for mods and menu
 -/-
 CSV FORMAT
 **assumptions**
