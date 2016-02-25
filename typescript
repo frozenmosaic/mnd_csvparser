@@ -1,141 +1,0 @@
-Script started on Fri Feb 19 16:56:41 2016
-[?1034hbash-3.2$ abc
-bash: abc: command not found
-bash-3.2$ 
-bash-3.2$ 
-bash-3.2$ a[Kman sci[Kript
-[?1049h[?1h=mdoc warning: .Fx: Unknown FreeBSD version `9.2' (#190)
-
-SCRIPT(1)                 BSD General Commands Manual                SCRIPT(1)
-
-[1mNAME[0m
-     [1mscript[0m -- make typescript of terminal session
-
-[1mSYNOPSIS[0m
-     [1mscript[0m [[1m-adkpqr[0m] [[1m-F[0m [4mpipe[24m] [[1m-t[0m [4mtime[24m] [[4mfile[24m [[4mcommand[24m [4m...[24m]]
-
-[1mDESCRIPTION[0m
-     The [1mscript[0m utility makes a typescript of everything printed on your terminal.  It is useful for students who need a
-     hardcopy record of an interactive session as proof of an assignment, as the typescript file can be printed out later
-     with lpr(1).
-
-     If the argument [4mfile[24m is given, [1mscript[0m saves all dialogue in [4mfile[24m.  If no file name is given, the typescript is saved
-     in the file [4mtypescript[24m.
-
-     If the argument [4mcommand[24m is given, [1mscript[0m will run the specified command with an optional argument vector instead of
-     an interactive shell.
-
-     The following options are available:
-
-     [1m-a[0m      Append the output to [4mfile[24m or [4mtypescript[24m, retaining the prior contents.
-
-     [1m-d[0m      When playing back a session with the [1m-p[0m flag, do not sleep between records when playing back a timestamped
-             session.
-
-     [1m-F[0m [4mpipe[24m
-             Immediately flush output after each write.  This will allow a user to create a named pipe using mkfifo(1)
-             and another user may watch the live session using a utility like cat(1).
-
-     [1m-k[0m      Log keys sent to the program as well as output.
-
-     [1m-p[0m      Play back a session recorded with the [1m-r[0m flag in real time.
-
-     [1m-q[0m      Run in quiet mode, omit the start, stop and command status messages.
-
-     [1m-r[0m      Record a session with input, output, and timestamping.
-
-     [1m-t[0m [4mtime[24m
-             Specify the interval at which the script output file will be flushed to disk, in seconds.  A value of 0
-             causes [1mscript[0m to flush after every character I/O event.  The default interval is 30 seconds.
-:[K[K [KESCESC[KOO[KBB[K
-:[K[K [KESCESC[KOO[KBB[K     The script ends when the forked shell (or command) exits (a [4mcontrol-D[24m to exit the Bourne shell (sh(1)), and [4mexit[24m,
-:[K[K [KESCESC[KOO[KBB[K     [4mlogout[24m or [4mcontrol-D[24m (if [4mignoreeof[24m is not set) for the C-shell, csh(1)).
-:[K[K [KESCESC[KOO[KBB[K
-:[K[K [KESCESC[KOO[KBB[K     Certain interactive commands, such as vi(1), create garbage in the typescript file.  The [1mscript[0m utility works best
-:[K[K [KESCESC[KOO[KBB[K     with commands that do not manipulate the screen.  The results are meant to emulate a hardcopy terminal, not an
-:[K[K [KESCESC[KOO[KBB[K     addressable one.
-:[K[K [KESCESC[KOO[KBB[K
-:[K[K [KESCESC[KOO[KBB[K[1mENVIRONMENT[0m
-:[K[K [KESCESC[KOO[KBB[K     The following environment variables are utilized by [1mscript[0m:
-:[K[K [KESCESC[KOO[KBB[K
-:[K[K [KESCESC[KOO[KBB[K     SCRIPT
-:[K[K [KESCESC[KOO[KBB[K            The SCRIPT environment variable is added to the sub-shell.  If SCRIPT already existed in the users environ-
-:[K[K [KESCESC[KOO[KBB[K            ment, its value is overwritten within the sub-shell.  The value of SCRIPT is the name of the [4mtypescript[24m file.
-:[K[K [KESCESC[KOO[KBB[K
-:[K[K [KESCESC[KOO[KBB[K     SHELL  If the variable SHELL exists, the shell forked by [1mscript[0m will be that shell.  If SHELL is not set, the Bourne
-:[K[K [KESCESC[KOO[KBB[K            shell is assumed.  (Most shells set this variable automatically).
-:[K[K [KESCESC[KOO[KBB[K
-:[K[K [KESCESC[KOO[KBB[K[1mSEE[0m [1mALSO[0m
-:[K[K [KESCESC[KOO[KBB[K     csh(1)
-:[K[K [KESCESC[KOO[KBB[K
-:[K[K [KESCESC[KOO[KBB[K[1mHISTORY[0m
-:[K[K [KESCESC[KOO[KBB[K     The [1mscript[0m command appeared in 3.0BSD.
-:[K[K [KESCESC[KOO[KBB[K
-:[K[K [KESCESC[KOO[KBB[K     The [1m-d[0m, [1m-p[0m and [1m-r[0m options first appeared in NetBSD 2.0 and were ported to FreeBSD 9.2.
-:[K[K [KESCESC[KOO[KBB[K
-:[K[K [KESCESC[KOO[KBB[K[1mBUGS[0m
-:[K[K [KESCESC[KOO[KBB[K     The [1mscript[0m utility places [1meverything[0m in the log file, including linefeeds and backspaces.  This is not what the
-:[K[K [KESCESC[KOO[KBB[K     naive user expects.
-:[K[K [KESCESC[KOO[KBB[K
-:[K[K [KESCESC[KOO[KBB[K     It is not possible to specify a command without also naming the script file because of argument parsing compatibil-
-:[K[K [KESCESC[KOO[KBB[K     ity issues.
-:[K[K [KESCESC[KOO[KBB[K
-:[K[K [KESCESC[KOO[KBB[K     When running in [1m-k[0m mode, echo cancelling is far from ideal.  The slave terminal mode is checked for ECHO mode to
-:[K[K [KESCESC[KOO[KBB[K     check when to avoid manual echo logging.  This does not work when the terminal is in a raw mode where the program
-:[K[K [KESCESC[KOO[KBB[K     being run is doing manual echo.
-:[K[K [KESCESC[KOO[KBB[K
-:[K[K [KESCESC[KOO[KBB[K     If [1mscript[0m reads zero bytes from the terminal, it switches to a mode when it only attempts to read once a second
-:[K[K [KESCESC[KOO[KBB[K     until there is data to read.  This prevents [1mscript[0m from spinning on zero-byte reads, but might cause a 1-second
-:[K[K [KESCESC[KOO[KBB[K     delay in processing of user input.
-:[K[K [KESCESC[KOO[KBB[K
-:[K[K [KESCESC[KOO[KBB[KBSD                            December 4, 2013                            BSD
-:[K[K [KESCESC[KOO[KBB[K[K[7m(END)[27m[K[K [KESCESC[KOO[KBB[K[K[7m(END)[27m[K[K [KESCESC[KOO[KBB[K[K[7m(END)[27m[K[K [KESCESC[KOO[KBB[K[K[7m(END)[27m[K[K [KESCESC[KOO[KBB[K[K[7m(END)[27m[K[K [KESCESC[KOO[KBB[K[K[7m(END)[27m[K[K [KESCESC[KOO[KBB[K[K[7m(END)[27m[K[K [KESCESC[KOO[KBB[K[K[7m(END)[27m[K[K [KESCESC[KOO[KBB[K[K[7m(END)[27m[K[K [KESCESC[KOO[KBB[K[K[7m(END)[27m[K[K [KESCESC[KOO[KBB[K[K[7m(END)[27m[K[K [KESCESC[KOO[KBB[K[K[7m(END)[27m[K[K [KESCESC[KOO[KBB[K[K[7m(END)[27m[K[K [KESCESC[KOO[KBB[K[K[7m(END)[27m[K[K [KESCESC[KOO[KBB[K[K[7m(END)[27m[K[K [KESCESC[KOO[KBB[K[K[7m(END)[27m[K[K [KESCESC[KOO[KBB[K[K[7m(END)[27m[K[K [KESCESC[KOO[KBB[K[K[7m(END)[27m[K[K [KESCESC[KOO[KBB[K[K[7m(END)[27m[K[K [KESCESC[KOO[KBB[K[K[7m(END)[27m[K[K [KESCESC[KOO[KBB[K[K[7m(END)[27m[K[K [KESCESC[KOO[KBB[K[K[7m(END)[27m[K[K [KESCESC[KOO[KBB[K[K[7m(END)[27m[K[K [KESCESC[KOO[KBB[K[K[7m(END)[27m[K[K [KESCESC[KOO[KBB[K[K[7m(END)[27m[K[K [KESCESC[KOO[KBB[K[K[7m(END)[27m[K[K [KESCESC[KOO[KBB[K[K[7m(END)[27m[K[K [KESCESC[KOO[KBB[K[K[7m(END)[27m[K[K [KESCESC[KOO[KBB[K[K[7m(END)[27m[K[K [KESCESC[KOO[KBB[K[K[7m(END)[27m[K[K [KESCESC[KOO[KAA[K[HM             causes [1mscript[0m to flush after every character I/O event.  The default interval is 30 seconds.
-[43;1H[K:[K[K [KESCESC[KOO[KAA[K[HM             Specify the interval at which the script output file will be flushed to disk, in seconds.  A value of 0
-[43;1H[K:[K[K [KESCESC[KOO[KAA[K[HM     [1m-t[0m [4mtime[24m
-[43;1H[K:[K[K [KESCESC[KOO[KAA[K[HM
-[43;1H[K:[K[K [KESCESC[KOO[KAA[K[HM     [1m-r[0m      Record a session with input, output, and timestamping.
-[43;1H[K:[K[K [KESCESC[KOO[KAA[K[HM
-[43;1H[K:[K[K [KESCESC[KOO[KAA[K[HM     [1m-q[0m      Run in quiet mode, omit the start, stop and command status messages.
-[43;1H[K:[K[K [KESCESC[KOO[KAA[K[HM
-[43;1H[K:[K[K [KESCESC[KOO[KAA[K[HM     [1m-p[0m      Play back a session recorded with the [1m-r[0m flag in real time.
-[43;1H[K:[K[K [KESCESC[KOO[KAA[K[HM
-[43;1H[K:[K[K [KESCESC[KOO[KAA[K[HM     [1m-k[0m      Log keys sent to the program as well as output.
-[43;1H[K:[K[K [KESCESC[KOO[KAA[K[HM
-[43;1H[K:[K[K [KESCESC[KOO[KAA[K[HM             and another user may watch the live session using a utility like cat(1).
-[43;1H[K:[K[K [KESCESC[KOO[KAA[K[HM             Immediately flush output after each write.  This will allow a user to create a named pipe using mkfifo(1)
-[43;1H[K:[K[K [KESCESC[KOO[KAA[K[HM     [1m-F[0m [4mpipe[24m
-[43;1H[K:[K[K [KESCESC[KOO[KAA[K[HM
-[43;1H[K:[K[K [KESCESC[KOO[KAA[K[HM             session.
-[43;1H[K:[K[K [KESCESC[KOO[KAA[K[HM     [1m-d[0m      When playing back a session with the [1m-p[0m flag, do not sleep between records when playing back a timestamped
-[43;1H[K:[K[K [KESCESC[KOO[KAA[K[HM
-[43;1H[K:[K[K [KESCESC[KOO[KAA[K[HM     [1m-a[0m      Append the output to [4mfile[24m or [4mtypescript[24m, retaining the prior contents.
-[43;1H[K:[K[K [KESCESC[KOO[KAA[K[HM
-[43;1H[K:[K[K [KESCESC[KOO[KAA[K[HM     The following options are available:
-[43;1H[K:[K[K [KESCESC[KOO[KAA[K[HM
-[43;1H[K:[K[K [KESCESC[KOO[KAA[K[HM     an interactive shell.
-[43;1H[K:[K[K [KESCESC[KOO[KAA[K[HM     If the argument [4mcommand[24m is given, [1mscript[0m will run the specified command with an optional argument vector instead of
-[43;1H[K:[K[K [KESCESC[KOO[KAA[K[HM
-[43;1H[K:[K[K [KESCESC[KOO[KAA[K[HM     in the file [4mtypescript[24m.
-[43;1H[K:[K[K [KESCESC[KOO[KAA[K[HM     If the argument [4mfile[24m is given, [1mscript[0m saves all dialogue in [4mfile[24m.  If no file name is given, the typescript is saved
-[43;1H[K:[K[K [KESCESC[KOO[KAA[K[HM
-[43;1H[K:[K[K [KESCESC[KOO[KAA[K[HM     with lpr(1).
-[43;1H[K:[K[K [KESCESC[KOO[KAA[K[HM     hardcopy record of an interactive session as proof of an assignment, as the typescript file can be printed out later
-[43;1H[K:[K[K [KESCESC[KOO[KAA[K[HM     The [1mscript[0m utility makes a typescript of everything printed on your terminal.  It is useful for students who need a
-[43;1H[K:[K[K [KESCESC[KOO[KAA[K[HM[1mDESCRIPTION[0m
-[43;1H[K:[K[K [KESCESC[KOO[KAA[K[HM
-[43;1H[K:[K[K [KESCESC[KOO[KAA[K[HM     [1mscript[0m [[1m-adkpqr[0m] [[1m-F[0m [4mpipe[24m] [[1m-t[0m [4mtime[24m] [[4mfile[24m [[4mcommand[24m [4m...[24m]]
-[43;1H[K:[K[K [KESCESC[KOO[KAA[K[HM[1mSYNOPSIS[0m
-[43;1H[K:[K[K [KESCESC[KOO[KAA[K[HM
-[43;1H[K:[K[K [KESCESC[KOO[KAA[K[HM     [1mscript[0m -- make typescript of terminal session
-[43;1H[K:[K[K [KESCESC[KOO[KAA[K[HM[1mNAME[0m
-[43;1H[K:[K[K [KESCESC[KOO[KAA[K[HM
-[43;1H[K:[K[K [KESCESC[KOO[KAA[K[HMSCRIPT(1)                 BSD General Commands Manual                SCRIPT(1)
-[43;1H[K:[K[K [KESCESC[KOO[KAA[K[HM
-[43;1H[K:[K[K [KESCESC[KOO[KAA[K[K:[K[K [KESCESC[KOO[KAA[K[K:[K[K [K::[Kqq[K[?1l>[?1049lbash-3.2$ 
-bash-3.2$ q[K-a[K[Kscript -a
-Script started, output file is typescript
-[?1034hbash-3.2$ -a
-bash: -a: command not found
-bash-3.2$ [?1034hbash-3.2$ -a
-bash: -a: command not found
-bash-3.2$ 

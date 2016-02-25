@@ -17,6 +17,9 @@ class ModsParser extends CSVParser
     	parent::__construct($file);
     }
 
+    /**
+     * @inheritDoc
+     */
     public function insert()
     {
         $count        = count($this->csv_data);
