@@ -3,10 +3,8 @@ namespace Parser;
 
 include '/Users/VyHuynh/Sites/MenuDrive/vendor/parsecsv/php-parsecsv/parsecsv.lib.php';
 
-class MenuParser
+class ModsParser
 {
-
-    // private $type;
 
     private $parseCSV;
 
@@ -14,7 +12,7 @@ class MenuParser
 
     private $location_id = 842;
 
-    public $mod_errors  = array();
+    public $errors  = array();
     public $errors_code = array();
     public $errors_msg  = array(
         1 => 'Empty Data',
@@ -22,18 +20,20 @@ class MenuParser
     );
     public $csv_data;
 
-    private $inserted_group = array(); // used for both menu groups and modifier groups
+    private $inserted_group = array(); 
     private $inserted_item  = array();
-    // private $inserted_moditem = array();
 
     private $group_id    = array();
     private $item_id     = array();
-    // private $modgroup_id = array();
 
-    public function __construct()
+    public function __construct($file)
     {
-    	$this->parseCSV = new \parseCSV($menu_file);
-        $this->run();
+    	if (is_file($file)) {
+            $this->parseCSV = new \parseCSV($file);
+            $this->run();
+        } else {
+            print_r("Unable to open file.");
+        }
     }
 
     public function getCSVData()
@@ -46,11 +46,11 @@ class MenuParser
         $this->getCSVData();
         $this->connectDtb();
 
-        if ($this->validateMods()) {
-            $this->insertMods();
+        if ($this->validate()) {
+            $this->insert();
             print_r("Successfully inserted modifiers. <br/>");
         } else {
-            $this->printErrorsMods();
+            $this->printErrors();
         }
     }
 
@@ -65,11 +65,11 @@ class MenuParser
         }
     }
 
-    public function validateMods()
+    public function validate()
     {
         $valid  = true;
-        $data   = $this->csv_mod;
-        $errors = $this->mod_errors;
+        $data   = $this->csv_data;
+        $errors = $this->errors;
 
         // remove empty rows and check for empty values in: [mod] group, item
         $numRows   = count($data);
@@ -80,7 +80,7 @@ class MenuParser
             foreach ($row as $key => $elem) {
                 if (empty($elem)) {
                     $emptyElems++;
-                    if ($key == 'Group' || $key == 'Category' || $key == 'Item') {
+                    if ($key == 'Group' || $key == 'Item') {
                         $temp_errors[] = $key;
                     }
                 }
@@ -103,17 +103,17 @@ class MenuParser
 
         $data = array_values($data);
 
-        $this->csv_mod    = $data;
-        $this->mod_errors = $errors;
+        $this->csv_data    = $data;
+        $this->errors = $errors;
 
         return $valid;
 
     }
 
-    public function printErrorsMods()
+    public function printErrors()
     {
         print_r("For Modifier CSV File: <br/>");
-        foreach ($this->mod_errors as $key => $value) {
+        foreach ($this->errors as $key => $value) {
             foreach ($value as $elem) {
                 print_r("Empty value " . $elem . " for row " . ($key + 1) . ". <br/>");
             }
@@ -122,11 +122,11 @@ class MenuParser
 
     public function insert()
     {
-        $count        = count($this->csv_mod);
+        $count        = count($this->csv_data);
         $topping_item = array();
 
         for ($i = 0; $i < $count; $i++) {
-            $row   = $this->csv_mod[$i];
+            $row   = $this->csv_data[$i];
             $name  = $row['Group'];
             $min   = $row['Min'];
             $max   = $row['Max'];
@@ -179,12 +179,12 @@ class MenuParser
 
                 $stmt->execute();
                 $this->inserted_group[]   = $name;
-                $this->modgroup_id[$name] = $this->dbo->lastInsertId();
+                $this->group_id[$name] = $this->dbo->lastInsertId();
             }
 
             // insert mod items
-            if (!in_array($item, $this->inserted_moditem)) {
-                $groupid = $this->modgroup_id[$name];
+            if (!in_array($item, $this->inserted_item)) {
+                $groupid = $this->group_id[$name];
                 $query   =
                     "INSERT INTO `cs_toppingitems`
                         (
@@ -204,7 +204,7 @@ class MenuParser
 
                 $stmt = $this->dbo->prepare($query);
 
-                $sequence = count($this->inserted_moditem) + 1;
+                $sequence = count($this->inserted_item) + 1;
 
                 $stmt->bindParam(':groupid', $groupid);
                 $stmt->bindParam(':name', $item);
@@ -212,7 +212,7 @@ class MenuParser
                 $stmt->bindParam(':sequence', $sequence);
 
                 $stmt->execute();
-                $this->inserted_moditem[] = $item;
+                $this->inserted_item[] = $item;
 
             }
 

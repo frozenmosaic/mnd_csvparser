@@ -13,7 +13,7 @@ ob_start();
 
 <?php
 $upload_dir = 'uploads/';
-require 'parser.php';
+require 'modsparser.php';
 if (isset($_POST['submit'])) {
     if ($_FILES['file']['type'] == 'text/csv') {
         if ($_FILES['file']['error'] > 0) {
@@ -33,7 +33,7 @@ if (isset($_POST['submit'])) {
                 die('Error uploading file - check destination is writeable.' . '<br/>');
             } else {
                 echo 'Successfully uploaded file.' . '<br/>';
-                $parser = new Parser\Parser(1, null, $upload_dir . $_FILES['file']['name']);
+                $parser = new Parser\ModsParser($upload_dir . $_FILES['file']['name']);
             }
         }
     } else {

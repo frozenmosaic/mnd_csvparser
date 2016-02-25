@@ -14,8 +14,7 @@ class MenuParser
 
     private $location_id = 842;
 
-    public $menu_errors = array();
-    public $mod_errors  = array();
+    public $errors      = array();
     public $errors_code = array();
     public $errors_msg  = array(
         1 => 'Empty Data',
@@ -36,11 +35,14 @@ class MenuParser
     private $size_id     = array();
     private $modgroup_id = array();
 
-    public function __construct($file = null)
+    public function __construct($file)
     {
-
-        $this->parseCSV = new \parseCSV($file);
-        $this->run();
+        if (is_file($file)) {
+            $this->parseCSV = new \parseCSV($file);
+            $this->run();
+        } else {
+            print_r("Unable to open file.");
+        }
 
     }
 
@@ -85,7 +87,7 @@ class MenuParser
     {
         $valid  = true;
         $data   = $this->csv_data;
-        $errors = $this->menu_errors;
+        $errors = $this->errors;
 
         // remove empty rows and check for empty values in: [menu] group, category, item
         $numRows   = count($data);
@@ -119,8 +121,8 @@ class MenuParser
 
         $data = array_values($data);
 
-        $this->csv_data    = $data;
-        $this->menu_errors = $errors;
+        $this->csv_data = $data;
+        $this->errors   = $errors;
 
         return $valid;
     }
@@ -128,7 +130,7 @@ class MenuParser
     public function printErrors()
     {
         print_r("For Menu CSV File: <br/>");
-        foreach ($this->menu_errors as $key => $value) {
+        foreach ($this->errors as $key => $value) {
             foreach ($value as $elem) {
                 print_r("Empty value " . $elem . " for row " . ($key + 1) . ". <br/>");
             }
