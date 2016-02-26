@@ -2,7 +2,7 @@
 ob_start();
 ?>
 
-<form name="upload_menu" method="POST" action="" enctype="multipart/form-data">
+<form name="upload_mods" method="POST" action="" enctype="multipart/form-data">
     <fieldset>
         <legend>Modifiers Parser</legend>
         <label for="name">Modifiers File</label>
@@ -13,6 +13,7 @@ ob_start();
 
 <?php
 $upload_dir = 'uploads/';
+
 require 'modsparser.php';
 if (isset($_POST['submit'])) {
     if ($_FILES['file']['type'] == 'text/csv') {

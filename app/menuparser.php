@@ -10,8 +10,6 @@ include 'csvparser.php';
 class MenuParser extends CSVParser
 {
 
-    protected $location_id = 842;
-
     public function __construct($file)
     {
         parent::__construct($file);
