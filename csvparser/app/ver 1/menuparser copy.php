@@ -79,8 +79,7 @@ class MenuParser extends CSVParser
                 // insert menu category
                 $cat  = $row['Category'];
                 $size = $row['Size'];
-                if (!in_array($cat, $this->inserted_cat)) {
-
+                if (!in_array($cat, $this->inserted_cat)) {                    
                     $query =
                         "INSERT INTO `cs_menucategory`
                         (
@@ -114,17 +113,18 @@ class MenuParser extends CSVParser
                 $item = $row['Item'];
                 if (!in_array($item, $this->inserted_item)) {
                     $stmt = $this->dbo->prepare(
-                        "INSERT INTO `cs_menuitem`
-                    (
-                    `catid`,
-                    `itemname`
-                    )
-                VALUES
-                    (
-                    :catid,
-                    :itemname
-                    )
-                ");
+                        "INSERT INTO 
+                        `cs_menuitem`
+                            (
+                            `catid`,
+                            `itemname`
+                            )
+                        VALUES
+                            (
+                            :catid,
+                            :itemname
+                            )
+                        ");
                     $stmt->bindParam(':itemname', $item);
                     $catid = $this->cat_id[$cat];
                     $stmt->bindParam(':catid', $catid);

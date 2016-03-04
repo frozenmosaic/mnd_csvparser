@@ -1,0 +1,5 @@
+sudo mysqladmin -u root -p refresh
+ps auwx | grep mysql
+kill -9 [pid]
+mysqld_safe &
+/usr/local/mysql/support-files/mysql.server restart;
