@@ -97,7 +97,8 @@ possible updates:
 add new groups to same location - tested
 add new categories to same group and to different group - tested
 add new sizes to existing category - tested 
-add new items to same category and to different category - tested 
+add new items to same category and to different category - tested
+ 
 -/-
 CSV FORMAT
 **assumptions**

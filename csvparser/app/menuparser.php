@@ -231,6 +231,7 @@ class MenuParser extends CSVParser
                 // get id from database
                 $this->item_id[$item] = $gate_check_item;
             }
+            
             // insert category size names
 
             // get category id

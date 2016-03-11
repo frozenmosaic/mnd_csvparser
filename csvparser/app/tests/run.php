@@ -16,3 +16,4 @@
             WHERE sizename = '" . $sizename .
             "' AND catid = " . $cat_id;
 echo $query;
+
