@@ -47,10 +47,10 @@ class CSVParser
     protected $inserted_item     = array();
     protected $inserted_sizename = array();
 
-    protected $group_id    = array();
-    protected $cat_id      = array();
-    protected $item_id     = array();
-    protected $sizename_id = array();
+    protected $group_id = array();
+    protected $cat_id   = array();
+    protected $item_id  = array();
+    protected $size_id  = array();
 
     public function __construct($file)
     {
@@ -133,8 +133,14 @@ class CSVParser
 
                     if (empty($elem)) {
                         $emptyElems++;
-                        if ($key == 'Group' || $key == 'Category' || $key == 'Item') {
-                            $row_errors[2] = $key;
+                        if ($key == 'Group') {
+                            $row_errors[2][] = $key;
+                        }
+                        if ($key == 'Category') {
+                            $row_errors[2][] = $key;
+                        }
+                        if ($key == 'Item') {
+                            $row_errors[2][] = $key;
                         }
                     }
 
@@ -186,12 +192,13 @@ class CSVParser
                     print_r($this->errors_msg[$code] . ": <br/>");
 
                     if ($code == 2) {
-
-                        print_r("Empty value " . $invalidValue . " for row " . ($rowIndex) . ". <br/>");
+                        foreach ($invalidValue as $missingValue) {
+                            print_r("Empty value " . $missingValue . " for row " . ($rowIndex + 1) . ". <br/>");
+                        }
                     }
 
                     if ($code == 3) {
-                        print_r("Invalid topping type " . $invalidValue . " for row " . ($rowIndex) . ". <br/>");
+                        print_r("Invalid topping type " . $invalidValue . " for row " . ($rowIndex + 1) . ". <br/>");
                     }
 
                 }

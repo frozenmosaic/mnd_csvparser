@@ -24,23 +24,90 @@ class MenuParser extends CSVParser
     public function duplicateGroup($group)
     {
         $query =
-            "SELECT *
-            FROM `cs_menugroup`
+        "SELECT *
+            FROM  cs_menugroup
             WHERE locationid = '" . $this->location_id .
             "' AND menugroupname = '" . $group . "'";
         $stmt = $this->dbo->query($query);
         $res  = $stmt->fetchAll();
 
         if (count($res) > 0) {
-            return true;
+            // should have only one duplicate
+            return $res[0]['menugroupid'];
         } else {
-            return false;
+            return -1;
         }
     }
 
-    public function getGroupID()
+    public function duplicateCat($cat, $group_id)
     {
+        $query =
+            "SELECT *
+            FROM  cs_menucategory
+            WHERE menugroupid = '" . $group_id .
+            "' AND categoryname = '" . $cat . "'";
+        $stmt = $this->dbo->query($query);
+        $res  = $stmt->fetchAll();
 
+        if (count($res) > 0) {
+            // should have only one duplicate
+            return $res[0]['catid'];
+        } else {
+            return -1;
+        }
+    }
+
+    public function duplicateItem($item, $cat_id)
+    {
+        $query =
+            "SELECT *
+            FROM  cs_menuitem
+            WHERE catid = '" . $cat_id .
+            "' AND itemname = '" . $item . "'";
+        $stmt = $this->dbo->query($query);
+        $res  = $stmt->fetchAll();
+
+        if (count($res) > 0) {
+            // should have only one duplicate
+            return $res[0]['menuitemid'];
+        } else {
+            return -1;
+        }
+    }
+
+    public function duplicateSizeName($sizename, $cat_id)
+    {
+        $query =
+            "SELECT *
+            FROM  cs_categorysize
+            WHERE sizename = '" . $sizename .
+            "' AND categoryid = " . $cat_id;
+        $stmt = $this->dbo->query($query);
+        $res  = $stmt->fetchAll();
+
+        if (count($res) == 1) {
+            // should have only one duplicate
+            return $res[0]['sizeid'];
+        } else {
+            return -1;
+        }
+    }
+
+    public function duplicatePrice($item_id, $size_id)
+    {
+        $query =
+            "SELECT *
+            FROM  cs_price
+            WHERE itemid = '" . $item_id .
+            "' AND sizeid = " . $size_id;
+        $stmt = $this->dbo->query($query);
+        $res  = $stmt->fetchAll();
+        if (count($res) == 1) {
+            // should have only one duplicate
+            return $res[0]['priceid'];
+        } else {
+            return -1;
+        }
     }
 
     /**
@@ -60,13 +127,14 @@ class MenuParser extends CSVParser
             $group    = $row['Group'];
             $item     = $row['Item'];
             $sizename = !empty($row['Size Names']) ? $row['Size Names'] : 'size1';
-            $sizename = $sizename;
-            $cat      = $row['Category'];
-            $price    = $row['Price'];
+            $cat   = $row['Category'];
+            $price = $row['Price'];
 
-            if (!$this->duplicateGroup($group)) {
+            $gate_check_group = $this->duplicateGroup($group);
+            if ($gate_check_group == -1) {
                 // if group does not already exist in database
-                if (!in_array($group, $this->inserted_group)) { // if group has not been imported before in this spreadsheet
+                if (!in_array($group, $this->inserted_group)) {
+                    // if group has not been imported before in this spreadsheet
 
                     $stmt = $this->dbo->prepare(
                         "INSERT INTO `cs_menugroup`
@@ -83,18 +151,22 @@ class MenuParser extends CSVParser
                     $stmt->bindParam(':locationid', $this->location_id);
 
                     $stmt->execute();
-                    $this->inserted_group[] = $group; // record group that just got inserted
 
+                    // record group in spreasheet that just got inserted
+                    $this->inserted_group[] = $group;
                     $this->group_id[$group] = $this->dbo->lastInsertId();
                 }
             } else {
                 // group is in database
-                $this->group_id[$group] = $this->getGroupID();
+                // get group id
+                $this->group_id[$group] = $gate_check_group;
             }
 
             // insert menu category
-
-            if (!in_array($cat, $this->inserted_cat)) {
+            $gate_check_cat = $this->duplicateCat($cat, $this->group_id[$group]);
+            if ($gate_check_cat == -1) {
+                // category does not exist in database
+                // if (!in_array($cat, $this->inserted_cat)) {
                 $query =
                     "INSERT INTO `cs_menucategory`
                         (
@@ -122,10 +194,17 @@ class MenuParser extends CSVParser
                 // record category id
                 $this->cat_id[$cat] = $this->dbo->lastInsertId();
 
+                // }
+
+            } else {
+                // get id from database instead
+                $this->cat_id[$cat] = $gate_check_cat;
             }
 
             // insert menu item
-            if (!in_array($item, $this->inserted_item)) {
+            $gate_check_item = $this->duplicateItem($item, $this->cat_id[$cat]);
+            if ($gate_check_item == -1) {
+                // if (!in_array($item, $this->inserted_item)) {
                 $stmt = $this->dbo->prepare(
                     "INSERT INTO
                         `cs_menuitem`
@@ -147,8 +226,11 @@ class MenuParser extends CSVParser
 
                 $this->inserted_item[] = $item;
                 $this->item_id[$item]  = $this->dbo->lastInsertId();
+                // }
+            } else {
+                // get id from database
+                $this->item_id[$item] = $gate_check_item;
             }
-
             // insert category size names
 
             // get category id
@@ -156,7 +238,11 @@ class MenuParser extends CSVParser
             // construct identifying string for each size name based on candidate keys {cat_id, sizename}
             $sizename_str_id = $cat_id . $sizename;
 
-            if (!in_array($sizename_str_id, $this->inserted_sizename)) {
+            // check for duplicate size names in database, candidate keys {sizename, catid}
+            $gate_check_sizename = $this->duplicateSizeName($sizename, $cat_id);
+            if ($gate_check_sizename == -1) {
+                // size name does not yet exist in database
+
                 $stmt = $this->dbo->prepare(
                     "INSERT INTO `cs_categorysize`
                                 (
@@ -175,22 +261,39 @@ class MenuParser extends CSVParser
 
                 // track inserted size name
                 $this->inserted_sizename[] = $sizename_str_id;
+                // track id of inserted size name
+                $this->size_id[$sizename_str_id] = $this->dbo->lastInsertId();
 
                 // increase size counter (number of sizes unique for each category)
-                if (array_key_exists($cat_id, $size_counter)) {
-                    $size = $size_counter[$cat_id];
+                if ($gate_check_cat != -1) {
+                    if (array_key_exists($cat_id, $size_counter)) {
+                        $size = $size_counter[$cat_id];
+                    } else {
+                        $get_cur_size =
+                            "SELECT size
+                            FROM cs_menucategory
+                            WHERE catid = " . $cat_id;
+                        $stmt = $this->dbo->query($get_cur_size);
+                        $stmt = $stmt->fetchAll();
+                        $size = $stmt[0]['size'];
+                    }
                 } else {
                     $size = 0;
                 }
                 $size_counter[$cat_id] = $size + 1;
 
-                // track id of inserted size name
-                $this->sizename_id[$sizename_str_id] = $this->dbo->lastInsertId();
+            } else {
+                // size name already in database
+                $this->size_id[$sizename_str_id] = $gate_check_sizename;
             }
 
             // insert price
-            $query =
-                "INSERT INTO `cs_price`
+            $gate_check_price = $this->duplicatePrice($this->item_id[$item], $this->size_id[$sizename_str_id]);
+            if ($gate_check_price == -1) {
+                // price for this item of this size does not exist
+
+                $query =
+                    "INSERT INTO `cs_price`
                         (
                         `itemid`,
                         `sizeid`,
@@ -204,28 +307,22 @@ class MenuParser extends CSVParser
                         )
                     ";
 
-            $itemid = $this->item_id[$item];
+                $itemid = $this->item_id[$item];
+                $sizeid = $this->size_id[$sizename_str_id];
 
-            // if ($size == 1) {
-            //     $str = 'size1' . $cat;
-            // } elseif (empty($size)) {
-            //     if (empty($sizename)) {
-            //         $str = 'size1' . $cat;
-            //     } else {
-            //         $str = $sizename . $cat;
-            //     }
-            // } elseif ($size > 1) {
-            //     $str = $sizename . $cat;
-            // }
+                $stmt = $this->dbo->prepare($query);
+                $stmt->bindParam(':itemid', $itemid);
+                $stmt->bindParam(':sizeid', $sizeid);
+                $stmt->bindParam(':price', $price);
 
-            $sizeid = $this->sizename_id[$sizename_str_id];
-
-            $stmt = $this->dbo->prepare($query);
-            $stmt->bindParam(':itemid', $itemid);
-            $stmt->bindParam(':sizeid', $sizeid);
-            $stmt->bindParam(':price', $price);
-
-            $stmt->execute();
+                $stmt->execute();
+            } else {
+                $update_price = 
+                    "UPDATE `cs_price`
+                    SET price = $price 
+                    WHERE priceid = $gate_check_price";
+                $this->dbo->query($update_price);
+            }
         }
 
         // do size insertion
@@ -239,12 +336,8 @@ class MenuParser extends CSVParser
         }
 
         // print_r("<pre>");
-        // print_r($this->inserted_sizename);
+        // print_r($this->size_id);
         // print_r("</pre>");
-
-        //     print_r("<pre>");
-        //     print_r($this->sizename_id);
-        //     print_r("</pre>");
 
         $this->inserted_group    = array();
         $this->inserted_cat      = array();

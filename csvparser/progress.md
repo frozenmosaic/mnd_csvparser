@@ -67,6 +67,37 @@ added two upload forms
 
 add a validation gate for empty csv data/empty file
 separate two parsers for mods and menu
+
+### Fri, Mar 4
+tasks: 
+* how to check for duplicate groups, categories and items to allow update?
+
+### Wed, Mar 9
+test cases:
+duplicate groups for different location id  
+
+done:
+adding duplicate categories between different groups
+adding duplicate items between different categories
+adding new groups
+
+test process:
+1. add original menu 
+=> successful
+2. add new categories 
+expected behavior: add on top of original 
+=> successful
+3. update existing categories: add new size + items => successful
+expected behavior: add only the new sizes and new items
+4. updating duplicate items (same category and same name)
+expected behavior: do nothing (even though prices are changed) 
+=> successful
+
+possible updates:
+add new groups to same location - tested
+add new categories to same group and to different group - tested
+add new sizes to existing category - tested 
+add new items to same category and to different category - tested 
 -/-
 CSV FORMAT
 **assumptions**
@@ -74,7 +105,7 @@ CSV FORMAT
 * no menu groups will have duplicate menu categories. however, a location can have duplicate menu categories.
 * no menu categories will have duplicate menu items. however, a location and a menu group can have duplicate menu items, as long as they have different menu categories.
 * no location will have duplicate modifier groups
-* csv files from clients have to adopt the exact format
+* csv files from clients have to adopt the exact column order
 
 
 
