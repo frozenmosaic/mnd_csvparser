@@ -117,73 +117,12 @@ class CSVParser
      * @return [type] [description]
      */
     public function validate()
-    {
-        $valid  = true;
-        $data   = $this->csv_data;
-        $errors = $this->errors;
+    {}
 
-        // remove empty rows and check for empty values in: [menu] group, category, item
-        $numRows = count($data);
-        if (!empty($data)) {
-            foreach ($data as $rowIndex => $row) {
-                $emptyElems = 0;
-                $row_errors = array();
-                foreach ($row as $key => $elem) {
-                    trim($elem);
-
-                    if (empty($elem)) {
-                        $emptyElems++;
-                        if ($key == 'Group') {
-                            $row_errors[2][] = $key;
-                        }
-                        if ($key == 'Category') {
-                            $row_errors[2][] = $key;
-                        }
-                        if ($key == 'Item') {
-                            $row_errors[2][] = $key;
-                        }
-                    }
-
-                    if ($key == 'Type') {
-                        $elem = strtolower($elem);
-                        if (!empty($elem)) {
-                            if (!in_array($elem, $this->allowed_topping_types)) {
-                                $row_errors[3]       = $key;
-                                $this->errors_code[] = 3;
-                            }
-
-                        }
-                    }
-                }
-
-                if ($emptyElems == count($row)) {
-                    // remove empty rows
-                    unset($data[$rowIndex]);
-                } elseif ($emptyElems > 0 && count($row_errors)) {
-                    $valid = false;
-                    if (!in_array(2, $this->errors_code)) {
-                        $this->errors_code[] = 2;
-                    }
-                    $errors[$rowIndex] = $row_errors;
-                }
-            }
-
-            $data = array_values($data);
-        } else {
-            $valid               = false;
-            $this->errors_code[] = 1;
-        }
-
-        $this->csv_data = $data;
-        $this->errors   = $errors;
-
-        return $valid;
-    }
-
-/**
- * Print out errors, if there exist any
- * @return [type] [description]
- */
+    /**
+     * Print out errors, if there exist any
+     * @return [type] [description]
+     */
     public function printErrors()
     {
         if (!empty($this->errors_code)) {
@@ -209,10 +148,10 @@ class CSVParser
 
     }
 
-/**
- * Insert data into database using raw csv data, row by row
- * @return [void]
- */
+    /**
+     * Insert data into database using raw csv data, row by row
+     * @return [void]
+     */
     public function insert()
     {}
 }

@@ -15,14 +15,83 @@ class ModsParser extends CSVParser
         parent::__construct($file);
     }
 
+    /**
+     * Validate CSV Data by checking for: (1) empty file, and (2) missing important values
+     * @return [type] [description]
+     */
+    public function validate()
+    {
+        $valid  = true;
+        $data   = $this->csv_data;
+        $errors = $this->errors;
+
+        // remove empty rows and check for empty values in: [menu] group, category, item
+        $numRows = count($data);
+        if (!empty($data)) {
+            foreach ($data as $rowIndex => $row) {
+                $emptyElems = 0;
+                $row_errors = array();
+                foreach ($row as $key => $elem) {
+                    trim($elem);
+
+                    if (empty($elem)) {
+                        $emptyElems++;
+                        if ($key == 'Group') {
+                            $row_errors[2][] = $key;
+                        }
+
+                        if ($key == 'Item') {
+                            $row_errors[2][] = $key;
+                        }
+                    }
+
+                    if ($key == 'Type') {
+                        $elem = strtolower($elem);
+                        if (!empty($elem)) {
+                            if (!in_array($elem, $this->allowed_topping_types)) {
+                                $row_errors[3]       = $key;
+                                $this->errors_code[] = 3;
+                            }
+
+                        }
+                    }
+                }
+
+                if ($emptyElems == count($row)) {
+                    // remove empty rows
+                    unset($data[$rowIndex]);
+                } elseif ($emptyElems > 0 && count($row_errors)) {
+                    $valid = false;
+                    if (!in_array(2, $this->errors_code)) {
+                        $this->errors_code[] = 2;
+                    }
+                    $errors[$rowIndex] = $row_errors;
+                }
+            }
+
+            $data = array_values($data);
+        } else {
+            $valid               = false;
+            $this->errors_code[] = 1;
+        }
+
+        $this->csv_data = $data;
+        $this->errors   = $errors;
+
+        return $valid;
+    }
+
     public function duplicateGroup($group)
     {
         $query =
         "SELECT *
             FROM  cs_toppinggroup
-            WHERE locationid = '" . $this->location_id .
-            "' AND toppinggroupname = '" . $group . "'";
-        $stmt = $this->dbo->query($query);
+            WHERE locationid = :locationid
+            AND toppinggroupname = " . $this->dbo->quote($group);
+        $stmt = $this->dbo->prepare($query);
+        $stmt->bindParam(':locationid', $this->location_id);
+        // $stmt->bindParam(':group', $group);
+        $stmt->execute();
         $res = $stmt->fetchAll();
 
         if (count($res) > 0) {
@@ -35,17 +104,48 @@ class ModsParser extends CSVParser
 
     public function duplicateItem($item, $group_id)
     {
+
         $query =
-            "SELECT *
+        "SELECT *
             FROM  cs_toppingitems
-            WHERE toppinggroupid = '" . $group_id .
-            "' AND toppingitemname = '" . $item . "'";
-        $stmt = $this->dbo->query($query);
-        $res  = $stmt->fetchAll();
+            WHERE toppinggroupid = :groupid
+            AND toppingitemname = " . $this->dbo->quote($item);
+
+        $stmt = $this->dbo->prepare($query);
+        $stmt->bindParam(':groupid', $group_id);
+        // $stmt->bindParam(':item', $item);
+
+        $stmt->execute();
+        $res = $stmt->fetchAll();
+        // echo "<pre>" . $item . $group_id . "</pre>";
+        // print_r(count($res));
 
         if (count($res) > 0) {
             // should have only one duplicate
             return $res[0]['topping_id'];
+        } else {
+            return -1;
+        }
+    }
+
+    public function duplicateLabel($label, $group_id)
+    {
+        $query =
+        "SELECT *
+            FROM  cs_custom_topping_labels
+            WHERE topping_group_id = :groupid
+            AND topping_label = " . $this->dbo->quote($label);
+
+        $stmt = $this->dbo->prepare($query);
+        $stmt->bindParam(':groupid', $group_id);
+        // $stmt->bindParam(':item', $item);
+
+        $stmt->execute();
+        $res = $stmt->fetchAll();
+
+        if (count($res) > 0) {
+            // should have only one duplicate
+            // return $res[0]['topping_id'];
         } else {
             return -1;
         }
@@ -56,7 +156,10 @@ class ModsParser extends CSVParser
      */
     public function insert()
     {
-        $count        = count($this->csv_data);
+        $count = count($this->csv_data);
+        // print_r("<pre>");
+        // print_r($this->csv_data);
+        // print_r("</pre>");
         $topping_item = array(); // track type of modifier group, format: group name => type
 
         for ($i = 0; $i < $count; $i++) {
@@ -73,6 +176,11 @@ class ModsParser extends CSVParser
             $right         = $row['Right Price'];
             $extra_mul     = $row['Extra Multiplied By'];
             $custom_labels = $row['Custom Labels'];
+
+            // escape string
+            // $name = $this->dbo->quote($name);
+            // $item = $this->dbo->quote($item);
+            // $type = $this->dbo->quote($type);
 
             $topping_item[$name] = $type;
             // format group type
@@ -108,10 +216,10 @@ class ModsParser extends CSVParser
                         )
                     VALUES
                         (
-                        :name,
+                    " . $this->dbo->quote($name) . ",
                         :min,
                         :max,
-                        :type,
+                    " . $this->dbo->quote($type) . ",
                         :locationid,
                         :qty_item
                         )
@@ -122,26 +230,26 @@ class ModsParser extends CSVParser
                     $max = 1;
                 }
 
-                $stmt->bindParam(':name', $name);
+                // $stmt->bindParam(':name', $name);
                 $stmt->bindParam(':min', $min);
                 $stmt->bindParam(':max', $max);
-                $stmt->bindParam(':type', $type);
+                // $stmt->bindParam(':type', $type);
                 $stmt->bindParam(':qty_item', $qty_item);
                 $stmt->bindParam(':locationid', $this->location_id);
 
                 $stmt->execute();
-                $this->inserted_group[] = $name;
-                $this->group_id[$name]  = $this->dbo->lastInsertId();
+                // $this->inserted_group[] = $name;
+                $this->group_id[$name] = $this->dbo->lastInsertId();
             } else {
                 $this->group_id[$name] = $gate_check_group;
             }
+            $group_id = $this->group_id[$name];
 
             // insert mod items
-            $gate_check_item = $this->duplicateItem($item, $this->group_id[$name]);
+            $gate_check_item = $this->duplicateItem($item, $group_id);
             if ($gate_check_item == -1) {
-                $groupid = $this->group_id[$name];
-                $query   =
-                    "INSERT INTO `cs_toppingitems`
+                $query =
+                "INSERT INTO `cs_toppingitems`
                         (
                         `toppinggroupid`,
                         `toppingitemname`,
@@ -152,7 +260,7 @@ class ModsParser extends CSVParser
                     VALUES
                         (
                         :groupid,
-                        :name,
+                    " . $this->dbo->quote($item) . ",
                         :price,
                         :sequence,
                         :extra_mul
@@ -163,8 +271,8 @@ class ModsParser extends CSVParser
 
                 $sequence = count($this->inserted_item) + 1;
 
-                $stmt->bindParam(':groupid', $groupid);
-                $stmt->bindParam(':name', $item);
+                $stmt->bindParam(':groupid', $group_id);
+                // $stmt->bindParam(':name', $item);
                 $stmt->bindParam(':price', $price);
                 $stmt->bindParam(':sequence', $sequence);
                 $stmt->bindParam(':extra_mul', $extra_mul);
@@ -183,7 +291,7 @@ class ModsParser extends CSVParser
                             `right_price` = $right,
                             `toppingitemprice` = 0.0
                         WHERE `toppingitemname` = '$item'
-                                AND `toppinggroupid` = $groupid
+                                AND `toppinggroupid` = $group_id
                     ";
 
                     $stmt = $this->dbo->prepare($query);
@@ -193,8 +301,15 @@ class ModsParser extends CSVParser
             }
 
             if ($topping_item[$name] == 'Custom') {
-                $query =
-                    "INSERT INTO `cs_custom_topping_labels`
+
+                $labels = explode(";", $custom_labels);
+
+                foreach ($labels as $label) {
+                    $label            = trim($label);
+                    $gate_check_label = $this->duplicateLabel($label, $group_id);
+                    if ($gate_check_label == -1) {
+                        $query =
+                        "INSERT INTO `cs_custom_topping_labels`
                             (
                             `topping_group_id`,
                             `topping_label`
@@ -202,27 +317,24 @@ class ModsParser extends CSVParser
                         VALUES
                             (
                             :groupid,
-                            :label
+                        " . $this->dbo->quote($label) . "
                             )
                         ";
 
-                $stmt = $this->dbo->prepare($query);
+                        $stmt = $this->dbo->prepare($query);
+                        $stmt->bindParam(':groupid', $group_id);
 
-                $labels = explode(";", $custom_labels);
-                $stmt->bindParam(':groupid', $groupid);
+                        $stmt->execute();
+                    }
 
-                foreach ($labels as $value) {
-                    $value = trim($value);
-                    $stmt->bindParam(':label', $value);
-                    $stmt->execute();
                 }
 
             }
 
         }
 
-        // print_r("<pre>");
-        // print_r($this->group_id);
-        // print_r("</pre>");
+        print_r("<pre>");
+        print_r($this->group_id);
+        print_r("</pre>");
     }
 }

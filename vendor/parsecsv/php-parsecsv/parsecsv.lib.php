@@ -218,7 +218,7 @@ class parseCSV {
      * @var string
      */
     // public $input_encoding = 'ISO-8859-1';
-    public $input_encoding = 'utf-8';
+    public $input_encoding = 'utf8mb4';
 
 
     /**
@@ -229,7 +229,7 @@ class parseCSV {
      * @var string
      */
     // public $output_encoding = 'ISO-8859-1';
-    public $output_encoding = 'utf-8';
+    public $output_encoding = 'utf8mb4';
 
     /**
      * Linefeed

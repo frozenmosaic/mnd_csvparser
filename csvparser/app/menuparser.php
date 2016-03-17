@@ -16,6 +16,64 @@ class MenuParser extends CSVParser
     }
 
     /**
+     * Validate CSV Data by checking for: (1) empty file, and (2) missing important values
+     * @return [type] [description]
+     */
+    public function validate()
+    {
+        $valid  = true;
+        $data   = $this->csv_data;
+        $errors = $this->errors;
+
+        // remove empty rows and check for empty values in: [menu] group, category, item
+        $numRows = count($data);
+        if (!empty($data)) {
+            foreach ($data as $rowIndex => $row) {
+                $emptyElems = 0;
+                $row_errors = array();
+                foreach ($row as $key => $elem) {
+                    trim($elem);
+
+                    if (empty($elem)) {
+                        $emptyElems++;
+                        if ($key == 'Group') {
+                            $row_errors[2][] = $key;
+                        }
+                        if ($key == 'Category') {
+                            $row_errors[2][] = $key;
+                        }
+                        if ($key == 'Item') {
+                            $row_errors[2][] = $key;
+                        }
+                    }
+
+                }
+
+                if ($emptyElems == count($row)) {
+                    // remove empty rows
+                    unset($data[$rowIndex]);
+                } elseif ($emptyElems > 0 && count($row_errors)) {
+                    $valid = false;
+                    if (!in_array(2, $this->errors_code)) {
+                        $this->errors_code[] = 2;
+                    }
+                    $errors[$rowIndex] = $row_errors;
+                }
+            }
+
+            $data = array_values($data);
+        } else {
+            $valid               = false;
+            $this->errors_code[] = 1;
+        }
+
+        $this->csv_data = $data;
+        $this->errors   = $errors;
+
+        return $valid;
+    }
+
+    /**
      * Check for existing Menu Groups in database
      * @param  [type] $group name of menu group to check
      * @return boolean        return true if there is a duplicate in database,
@@ -27,7 +85,7 @@ class MenuParser extends CSVParser
         "SELECT *
             FROM  cs_menugroup
             WHERE locationid = '" . $this->location_id .
-            "' AND menugroupname = '" . $group . "'";
+            "' AND menugroupname = " . $this->dbo->quote($group);
         $stmt = $this->dbo->query($query);
         $res  = $stmt->fetchAll();
 
@@ -45,7 +103,7 @@ class MenuParser extends CSVParser
             "SELECT *
             FROM  cs_menucategory
             WHERE menugroupid = '" . $group_id .
-            "' AND categoryname = '" . $cat . "'";
+            "' AND categoryname = " . $this->dbo->quote($cat);
         $stmt = $this->dbo->query($query);
         $res  = $stmt->fetchAll();
 
@@ -63,7 +121,7 @@ class MenuParser extends CSVParser
             "SELECT *
             FROM  cs_menuitem
             WHERE catid = '" . $cat_id .
-            "' AND itemname = '" . $item . "'";
+            "' AND itemname = " . $this->dbo->quote($item);
         $stmt = $this->dbo->query($query);
         $res  = $stmt->fetchAll();
 
@@ -80,8 +138,8 @@ class MenuParser extends CSVParser
         $query =
             "SELECT *
             FROM  cs_categorysize
-            WHERE sizename = '" . $sizename .
-            "' AND categoryid = " . $cat_id;
+            WHERE sizename = " . $this->dbo->quote($sizename) .
+            " AND categoryid = " . $cat_id;
         $stmt = $this->dbo->query($query);
         $res  = $stmt->fetchAll();
 
@@ -130,6 +188,7 @@ class MenuParser extends CSVParser
             $cat   = $row['Category'];
             $price = $row['Price'];
 
+
             $gate_check_group = $this->duplicateGroup($group);
             if ($gate_check_group == -1) {
                 // if group does not already exist in database
@@ -143,11 +202,11 @@ class MenuParser extends CSVParser
                         `locationid`
                         )
                     VALUES (
-                        :name,
+                    " . $this->dbo->quote($group) . ",
                         :locationid
                         )"
                     );
-                    $stmt->bindParam(':name', $group);
+                    // $stmt->bindParam(':name', $group);
                     $stmt->bindParam(':locationid', $this->location_id);
 
                     $stmt->execute();
@@ -176,12 +235,12 @@ class MenuParser extends CSVParser
                     VALUES
                         (
                         :groupid,
-                        :name
+                    " . $this->dbo->quote($cat) . "
                         )"
                 ;
 
                 $stmt = $this->dbo->prepare($query);
-                $stmt->bindParam(':name', $cat);
+                // $stmt->bindParam(':name', $cat);
 
                 $id = $this->group_id[$group];
                 $stmt->bindParam(':groupid', $id);
@@ -215,10 +274,10 @@ class MenuParser extends CSVParser
                         VALUES
                             (
                             :catid,
-                            :itemname
+                        " . $this->dbo->quote($item) . "
                             )
                         ");
-                $stmt->bindParam(':itemname', $item);
+                // $stmt->bindParam(':itemname', $item);
                 $catid = $this->cat_id[$cat];
                 $stmt->bindParam(':catid', $catid);
 
@@ -253,11 +312,11 @@ class MenuParser extends CSVParser
                             VALUES
                                 (
                                 :catid,
-                                :sizename
+                            " . $this->dbo->quote($sizename) . "
                                 )
                             ");
                 $stmt->bindParam(':catid', $cat_id);
-                $stmt->bindParam(':sizename', $sizename);
+                // $stmt->bindParam(':sizename', $sizename);
                 $stmt->execute();
 
                 // track inserted size name
