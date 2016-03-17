@@ -106,6 +106,7 @@ class MenuParser extends CSVParser
             "' AND categoryname = " . $this->dbo->quote($cat);
         $stmt = $this->dbo->query($query);
         $res  = $stmt->fetchAll();
+        print_r("<pre>" . $query . "</pre>");
 
         if (count($res) > 0) {
             // should have only one duplicate
@@ -175,7 +176,9 @@ class MenuParser extends CSVParser
     public function insert()
     {
         $count = count($this->csv_data);
-
+// print_r("<pre>");
+//         print_r($this->csv_data);
+//         print_r("</pre>");
         $size_counter = array(); // format: category => size number
 
         for ($i = 0; $i < $count; $i++) {
