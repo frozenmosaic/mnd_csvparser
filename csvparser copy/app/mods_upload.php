@@ -2,18 +2,19 @@
 ob_start();
 ?>
 
-<form name="upload_menu" method="POST" action="" enctype="multipart/form-data">
+<form name="upload_mods" method="POST" action="" enctype="multipart/form-data">
     <fieldset>
-        <legend>Menu Parser</legend>
-        <label for="name">Menu File</label>
-    	<input type="file" name="file" id="file" />
+        <legend>Modifiers Parser</legend>
+        <label for="name">Modifiers File</label>
+        <input type="file" name="file" id="file" />
         <input type="submit" name="submit" value="Submit" />
     </fieldset>
 </form>
 
 <?php
 $upload_dir = 'uploads/';
-require 'menuparser.php';
+
+require 'modsparser.php';
 if (isset($_POST['submit'])) {
     if ($_FILES['file']['type'] == 'text/csv') {
         if ($_FILES['file']['error'] > 0) {
@@ -32,8 +33,8 @@ if (isset($_POST['submit'])) {
             if (!move_uploaded_file($_FILES['file']['tmp_name'], $upload_dir . $_FILES['file']['name'])) {
                 die('Error uploading file - check destination is writeable.' . '<br/>');
             } else {
-            	echo 'Successfully uploaded file.' . '<br/>';
-                $parser = new Parser\MenuParser($upload_dir . $_FILES['file']['name']); 
+                echo 'Successfully uploaded file.' . '<br/>';
+                $parser = new Parser\ModsParser($upload_dir . $_FILES['file']['name']);
             }
         }
     } else {

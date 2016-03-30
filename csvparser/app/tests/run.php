@@ -1,19 +1,19 @@
-<?php 
+<?php
 
-// include "menuparser.php";
+$host     = "localhost";
+$dbname   = "mnd";
+$user     = "root";
+$password = "mysql*root";
+$connStr  = "mysql:host=" . $host . ";dbname=" . $dbname;
 
-// $parser = new MenuParser\Parser('uploads/sample_menu.csv');
-// print_r("<pre>");
-// // print_r($parser->menu_errors);
-// // print_r($parser->mod_errors);
-// print_r("</pre>");
+$pdo      = new \PDO($connStr, $user, $password);
 
-        $sizename = 'Small';
-         $cat_id = 54;
-        $query =
-            "SELECT *
-            FROM  cs_categorysize
-            WHERE sizename = '" . $sizename .
-            "' AND catid = " . $cat_id;
-echo $query;
+$query = 
+"SELECT * FROM cs_menugroup";
 
+$res = $pdo->query($query);
+$res = $res->fetchAll();
+
+print_r("<pre>");
+print_r($res);
+print_r("</pre>");

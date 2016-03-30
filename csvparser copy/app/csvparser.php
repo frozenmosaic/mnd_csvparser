@@ -1,8 +1,7 @@
 <?php
 namespace Parser;
 
-// include '/Users/VyHuynh/Sites/MenuDrive/vendor/parsecsv/php-parsecsv/parsecsv.lib.php';
-include '../../vendor/parsecsv/php-parsecsv/parsecsv.lib.php';
+include '/Users/VyHuynh/Sites/MenuDrive/vendor/parsecsv/php-parsecsv/parsecsv.lib.php';
 
 /**
  * Parent class for CSV Parser
@@ -18,12 +17,9 @@ class CSVParser
 
     protected $dbo;
     protected $host     = "localhost";
-    protected $dbname   = "mnd";
+    protected $dbname   = "menudrive";
     protected $user     = "root";
-    protected $password = "mysql*root";
-    // protected $dbname   = "menudrive";
-    // protected $user     = "root";
-    // protected $password = "vy";
+    protected $password = "vy";
 
     protected $location_id = 842;
 
@@ -61,7 +57,6 @@ class CSVParser
         if (is_file($file)) {
             $this->parseCSV = new \parseCSV($file);
             $this->run();
-
         } else {
             print_r("Unable to open file.");
         }

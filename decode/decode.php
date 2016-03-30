@@ -9,7 +9,7 @@ class Decode
     private $primary_key = 'menuitemid';
 
     // column that has data to clean up
-    private $column = 'description';
+    private $column = 'itemname';
 
     // columns that have data to clean up
     // private $columns = array(
@@ -18,10 +18,13 @@ class Decode
     // );
 
     private $dbo;
-    private $host     = "localhost";
-    private $dbname   = "menudrive";
+    private $host = "localhost";
+    // private $dbname   = "menudrive";
+    // private $user     = "root";
+    // private $password = "vy";
+    private $dbname   = "mnd";
     private $user     = "root";
-    private $password = "vy";
+    private $password = "mysql*root";
 
     public function __construct()
     {
@@ -65,11 +68,6 @@ class Decode
         $stmt = $this->dbo->query($select);
         if ($stmt != false) {
             $result = $stmt->fetchAll();
-            echo 'Successfully selected data.';
-            // print_r("<pre>");
-            // print_r($result);
-            // print_r("</pre>");
-
             // update
             foreach ($result as $row) {
                 $id   = $row[$this->primary_key];
@@ -156,3 +154,5 @@ class Decode
     }
 
 }
+
+$decode = new Decode();

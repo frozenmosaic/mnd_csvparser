@@ -15,7 +15,7 @@ Add category and store item id
 Else: 
 Do nothing and retrieve item id 
 
-A custom label is considered unique if there is no other label with the exact name for the same topping group.
+A custom label is considered unique if there is no other label with the exact name for the same group.
 => unique identifier: label name + group id 
 If there is no duplicate:
 Add label 

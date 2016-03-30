@@ -107,7 +107,6 @@ CSV FORMAT
 * no menu categories will have duplicate menu items. however, a location and a menu group can have duplicate menu items, as long as they have different menu categories.
 * no location will have duplicate modifier groups
 * csv files from clients have to adopt the exact column order
-* custom labels have to be declared in order
 
 
 

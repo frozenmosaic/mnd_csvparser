@@ -1,0 +1,29 @@
++check unique item w/in category, and unique category w/in group
+(by expanding scope of repetition to database and not spreadsheet)
+
++size and size name:
+remove size column and keep a counter
+
++declare item in one same group and category but not in order: is data then still imported correctly?
+
++add updating functionality based on location_id
+
++error detecting: 
+empty rows (how is an ‘empty row’ defined?)
+extra rows
+human typos
+
++personal notes in spreadsheet: guaranteed to be untouched by the code
+
++modifiers:
+pizza/custom topping: ignore what doesnt matter
+
++no integrity constraint on min/max/type
+
++order matters, bc first row contains important info
+
++extra data points
+
++export data
+
++special characters

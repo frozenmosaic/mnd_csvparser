@@ -1,0 +1,110 @@
+Hi,
+
+I'm writing a small script to *parse CSV information* and store it in a database.
+I'm not using any framework since this is a small project, but I use Codeception to test my code.
+
+Basically what my class Parser does is parsing data from a CSV file, process the data (put it more neatly into arrays) and insert that data.
+
+Below is the method for inserting data:
+
+    public function insertCategories() {
+        // prepare statement
+        $stmt = $this->dbo->prepare("INSERT INTO `cs_menucategory` (`catid`, `menugroupid`, `categoryname`) VALUES (:catid, :menugroupid, :categoryname)");
+
+        // prepare parameters
+        $cats = $this->result['Category'];
+        for ($i = 0; $i < count($cats); $i++) {
+            $params = array();
+            $params['menugroupid'] = $i+1;
+            $params['catid'] = $i+1;
+            $params['categoryname'] = $cats[$i];
+
+            // execute statement
+            $stmt->execute($params);
+        }
+    }
+
+I also wrote a simple unit test for this method using Codeception:
+<?php
+use Parser\Parser;
+
+class Test extends \PHPUnit_Framework_TestCase
+{
+    protected function setUp()
+    {
+    }
+
+    protected function tearDown()
+    {
+    }
+
+    // tests
+    public function test() {
+        $parser = new Parser();
+        $parser->run(); 
+    }
+}
+?>
+
+in which method run is 
+    public function run() {
+        $this->createResultArrays();
+        $this->getCSVData();
+
+        $this->connectDtb();
+
+        $this->processData();
+        $this->insertCategories();
+    }
+
+When I ran this test and checked back in my database (using SequelPro), all data got **imported twice**. 
+Then I tried debugging in every way I can, including checking to see if the method got called more than once, or if the loop was causing the problem by simply printing out status 'flags'. 
+That proved unfruitful until I tried running the script on PHP interactive mode in the Terminal. Then the code worked just fine, all data got imported once and correctly. 
+
+Suspecting something wrong with the test, I ran the test again in debug mode, and here was what was returned:
+
+        Vy-Huynhs:MenuDrive VyHuynh$ ./vendor/bin/codecept run unit Test --debug
+        Codeception PHP Testing Framework v2.1.5
+        Powered by PHPUnit 4.8.22 by Sebastian Bergmann and contributors.
+
+          Group 'failed' is empty, no tests are loaded
+          entering insertCategories
+
+        Unit Tests (1) ------------------------------
+        Modules: Asserts, \Helper\Unit
+        ---------------------------------------------
+        Running Test::test... 
+          entering insertCategories
+        Test::test                             Ok
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        ---------------------------------------------
+
+
+        Time: 225 ms, Memory: 9.50Mb
+
+        OK (1 test, 0 assertions)
+        Vy-Huynhs:MenuDrive VyHuynh$ 
+
+
+I suspect this is what causing the error:
+    "Group 'failed' is empty, no tests are loaded"
+Maybe there are some configurations to Codeception that I didn't do correctly.
+
+Below is the content of the CSV file: 
+    Group,Category,Item
+    Main Menu,Appetizers,Buffalo Wings
+    ,,Chicken Fingers
+    ,,French Fries
+    ,Salad,Caesar Salad
+    ,,House Salad
+    Breakfast Menu,Sandwiches,BLT
+    ,Drinks,Coffee
+    ,,Tea"
+
+Thank you all.
+
+
+
+
+
+

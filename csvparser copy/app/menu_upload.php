@@ -33,7 +33,7 @@ if (isset($_POST['submit'])) {
                 die('Error uploading file - check destination is writeable.' . '<br/>');
             } else {
             	echo 'Successfully uploaded file.' . '<br/>';
-                $parser = new Parser\MenuParser($upload_dir . $_FILES['file']['name']); 
+                $parser = new Parser\MenuParser($upload_dir . $_FILES['file']['name']);
             }
         }
     } else {

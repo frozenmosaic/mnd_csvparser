@@ -21,22 +21,21 @@ class MenuParser extends CSVParser
      */
     public function validate()
     {
+        $valid  = true;
         $data   = $this->csv_data;
         $errors = $this->errors;
 
+        // remove empty rows and check for empty values in: [menu] group, category, item
         $numRows = count($data);
         if (!empty($data)) {
             foreach ($data as $rowIndex => $row) {
                 $emptyElems = 0;
                 $row_errors = array();
                 foreach ($row as $key => $elem) {
-                    // trim trailing spaces
                     trim($elem);
 
-                    // check for empty important values Group, Category and Item
                     if (empty($elem)) {
                         $emptyElems++;
-
                         if ($key == 'Group') {
                             $row_errors[2][] = $key;
                         }
@@ -53,9 +52,10 @@ class MenuParser extends CSVParser
                 if ($emptyElems == count($row)) {
                     // remove empty rows
                     unset($data[$rowIndex]);
-                } elseif ($emptyElems > 0 && count($row_errors) > 0) {
+                } elseif ($emptyElems > 0 && count($row_errors)) {
+                    $valid = false;
                     if (!in_array(2, $this->errors_code)) {
-                        $this->errors_code[] = 2; // record error: empty important values
+                        $this->errors_code[] = 2;
                     }
                     $errors[$rowIndex] = $row_errors;
                 }
@@ -63,14 +63,14 @@ class MenuParser extends CSVParser
 
             $data = array_values($data);
         } else {
-            $this->errors_code[] = 1; // record error: empty data
+            $valid               = false;
+            $this->errors_code[] = 1;
         }
 
         $this->csv_data = $data;
         $this->errors   = $errors;
 
-        return (count($this->errors_code) == 0);
-
+        return $valid;
     }
 
     /**
@@ -85,7 +85,7 @@ class MenuParser extends CSVParser
         "SELECT *
             FROM  cs_menugroup
             WHERE locationid = '" . $this->location_id .
-        "' AND menugroupname = " . $this->dbo->quote($group);
+            "' AND menugroupname = " . $this->dbo->quote($group);
         $stmt = $this->dbo->query($query);
         $res  = $stmt->fetchAll();
 
@@ -100,10 +100,10 @@ class MenuParser extends CSVParser
     public function duplicateCat($cat, $group_id)
     {
         $query =
-        "SELECT *
+            "SELECT *
             FROM  cs_menucategory
             WHERE menugroupid = '" . $group_id .
-        "' AND categoryname = " . $this->dbo->quote($cat);
+            "' AND categoryname = " . $this->dbo->quote($cat);
         $stmt = $this->dbo->query($query);
         $res  = $stmt->fetchAll();
         // print_r("<pre>" . $query . "</pre>");
@@ -119,10 +119,10 @@ class MenuParser extends CSVParser
     public function duplicateItem($item, $cat_id)
     {
         $query =
-        "SELECT *
+            "SELECT *
             FROM  cs_menuitem
             WHERE catid = '" . $cat_id .
-        "' AND itemname = " . $this->dbo->quote($item);
+            "' AND itemname = " . $this->dbo->quote($item);
         $stmt = $this->dbo->query($query);
         $res  = $stmt->fetchAll();
 
@@ -137,7 +137,7 @@ class MenuParser extends CSVParser
     public function duplicateSizeName($sizename, $cat_id)
     {
         $query =
-        "SELECT *
+            "SELECT *
             FROM  cs_categorysize
             WHERE sizename = " . $this->dbo->quote($sizename) .
             " AND categoryid = " . $cat_id;
@@ -177,23 +177,20 @@ class MenuParser extends CSVParser
     {
         $count = count($this->csv_data);
 // print_r("<pre>");
-        //         print_r($this->csv_data);
-        //         print_r("</pre>");
+//         print_r($this->csv_data);
+//         print_r("</pre>");
         $size_counter = array(); // format: category => size number
 
         for ($i = 0; $i < $count; $i++) {
             $row = $this->csv_data[$i]; // array of values for each csv data row
 
             // insert menu group
-            $group     = $row['Group'];
-            $item      = $row['Item'];
-            $sizename  = !empty($row['Size Names']) ? $row['Size Names'] : 'size1';
-            $cat       = $row['Category'];
-            $cat_desc  = $row['Category Description'];
-            $price     = $row['Price'];
-            $item_desc = $row['Item Description'];
-            $main_pos  = $row['Main POS ID'];
-            $size_pos  = $row['Size POS ID'];
+            $group    = $row['Group'];
+            $item     = $row['Item'];
+            $sizename = !empty($row['Size Names']) ? $row['Size Names'] : 'size1';
+            $cat   = $row['Category'];
+            $price = $row['Price'];
+
 
             $gate_check_group = $this->duplicateGroup($group);
             if ($gate_check_group == -1) {
@@ -231,22 +228,22 @@ class MenuParser extends CSVParser
             $gate_check_cat = $this->duplicateCat($cat, $this->group_id[$group]);
             if ($gate_check_cat == -1) {
                 // category does not exist in database
+                // if (!in_array($cat, $this->inserted_cat)) {
                 $query =
-                "INSERT INTO `cs_menucategory`
+                    "INSERT INTO `cs_menucategory`
                         (
                         `menugroupid`,
-                        `categoryname`,
-                        `description`
+                        `categoryname`
                         )
                     VALUES
                         (
                         :groupid,
-                    " . $this->dbo->quote($cat) . ",
-                    " . $this->dbo->quote($cat_desc) . "
+                    " . $this->dbo->quote($cat) . "
                         )"
                 ;
 
                 $stmt = $this->dbo->prepare($query);
+                // $stmt->bindParam(':name', $cat);
 
                 $id = $this->group_id[$group];
                 $stmt->bindParam(':groupid', $id);
@@ -259,43 +256,28 @@ class MenuParser extends CSVParser
                 // record category id
                 $this->cat_id[$cat] = $this->dbo->lastInsertId();
 
+                // }
+
             } else {
                 // get id from database instead
                 $this->cat_id[$cat] = $gate_check_cat;
-
-                // update description
-                if (!in_array($cat, $this->inserted_cat)) {
-                    $update_cat_desc =
-                    "UPDATE cs_menucategory
-                    SET description = " . $this->dbo->quote($cat_desc) . "
-                    WHERE catid = " . $this->cat_id[$cat];
-                    $this->dbo->query($update_cat_desc);
-                    print_r("<pre>" . $update_cat_desc . "</pre>");
-
-                    $this->inserted_cat[] = $cat;
-                }
-
             }
 
             // insert menu item
             $gate_check_item = $this->duplicateItem($item, $this->cat_id[$cat]);
             if ($gate_check_item == -1) {
-
+                // if (!in_array($item, $this->inserted_item)) {
                 $stmt = $this->dbo->prepare(
                     "INSERT INTO
                         `cs_menuitem`
                             (
                             `catid`,
-                            `itemname`,
-                            `description`,
-                            `pos_name`
+                            `itemname`
                             )
                         VALUES
                             (
                             :catid,
-                        " . $this->dbo->quote($item) . ",
-                        " . $this->dbo->quote($item_desc) . ",
-                        " . $this->dbo->quote($main_pos) . "
+                        " . $this->dbo->quote($item) . "
                             )
                         ");
                 // $stmt->bindParam(':itemname', $item);
@@ -310,20 +292,8 @@ class MenuParser extends CSVParser
             } else {
                 // get id from database
                 $this->item_id[$item] = $gate_check_item;
-
-                if (!in_array($item, $this->inserted_item)) {
-                    // update item description
-                    $update_item =
-                    "UPDATE cs_menuitem
-                    SET description = " . $this->dbo->quote($item_desc) . ",
-                        pos_name = " . $this->dbo->quote($main_pos) . "
-                    WHERE menuitemid = " . $this->item_id[$item];
-                    $this->dbo->query($update_item);
-                    $this->inserted_item[] = $item;
-
-                }
             }
-
+            
             // insert category size names
 
             // get category id
@@ -386,19 +356,17 @@ class MenuParser extends CSVParser
                 // price for this item of this size does not exist
 
                 $query =
-                "INSERT INTO `cs_price`
+                    "INSERT INTO `cs_price`
                         (
                         `itemid`,
                         `sizeid`,
-                        `price`,
-                        `pos_name`
+                        `price`
                         )
                     VALUES
                         (
                         :itemid,
                         :sizeid,
-                        :price,
-                    " . $this->dbo->quote($size_pos) . "
+                        :price
                         )
                     ";
 
@@ -412,10 +380,9 @@ class MenuParser extends CSVParser
 
                 $stmt->execute();
             } else {
-                $update_price =
-                "UPDATE `cs_price`
-                    SET price = $price,
-                        pos_name = " . $this->dbo->quote($size_pos) . "
+                $update_price = 
+                    "UPDATE `cs_price`
+                    SET price = $price 
                     WHERE priceid = $gate_check_price";
                 $this->dbo->query($update_price);
             }

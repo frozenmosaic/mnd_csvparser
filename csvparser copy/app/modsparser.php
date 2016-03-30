@@ -21,19 +21,19 @@ class ModsParser extends CSVParser
      */
     public function validate()
     {
+        $valid  = true;
         $data   = $this->csv_data;
         $errors = $this->errors;
 
+        // remove empty rows and check for empty values in: [menu] group, category, item
         $numRows = count($data);
         if (!empty($data)) {
             foreach ($data as $rowIndex => $row) {
                 $emptyElems = 0;
                 $row_errors = array();
                 foreach ($row as $key => $elem) {
-                    // trim trailing spaces
                     trim($elem);
 
-                    // check for empty important values Group and Item
                     if (empty($elem)) {
                         $emptyElems++;
                         if ($key == 'Group') {
@@ -45,13 +45,12 @@ class ModsParser extends CSVParser
                         }
                     }
 
-                    // check for unallowed topping types
                     if ($key == 'Type') {
                         $elem = strtolower($elem);
                         if (!empty($elem)) {
                             if (!in_array($elem, $this->allowed_topping_types)) {
                                 $row_errors[3]       = $key;
-                                $this->errors_code[] = 3; // record error: unallowed topping types
+                                $this->errors_code[] = 3;
                             }
 
                         }
@@ -61,9 +60,10 @@ class ModsParser extends CSVParser
                 if ($emptyElems == count($row)) {
                     // remove empty rows
                     unset($data[$rowIndex]);
-                } elseif ($emptyElems > 0 && count($row_errors) > 0) {
+                } elseif ($emptyElems > 0 && count($row_errors)) {
+                    $valid = false;
                     if (!in_array(2, $this->errors_code)) {
-                        $this->errors_code[] = 2; // record error: empty important values
+                        $this->errors_code[] = 2;
                     }
                     $errors[$rowIndex] = $row_errors;
                 }
@@ -71,13 +71,14 @@ class ModsParser extends CSVParser
 
             $data = array_values($data);
         } else {
-            $this->errors_code[] = 1; // record error: empty data
+            $valid               = false;
+            $this->errors_code[] = 1;
         }
 
         $this->csv_data = $data;
         $this->errors   = $errors;
 
-        return (count($this->errors) == 0);
+        return $valid;
     }
 
     public function duplicateGroup($group)
@@ -127,53 +128,24 @@ class ModsParser extends CSVParser
         }
     }
 
-    // /**
-    //  * Check whether unique label exists in database
-    //  * @return [type] [description]
-    //  */
-    // public function duplicateLabel($group_id, $label)
-    // {
-    //     $query =
-    //     "SELECT *
-    //         FROM  cs_custom_topping_labels
-    //         WHERE topping_group_id = :groupid
-    //         AND topping_label" . $this->dbo->quote($label);
-
-    //     $stmt = $this->dbo->prepare($query);
-    //     $stmt->bindParam(':groupid', $group_id);
-
-    //     $stmt->execute();
-    //     $res = $stmt->fetchAll();
-
-    //     if (count($res) > 0) {
-    //         // should have only one duplicate
-    //         return $res[0]['custom_topping_label_id'];
-    //     } else {
-    //         return -1;
-    //     }
-    // }
-
-    /**
-     * Check whether labels for a group exist. Labels for a group exist
-     * only when there are exactly 03 entries in the database.
-     * @param  [type] $group_id [id of group to check]
-     * @return [type]           []
-     */
-    public function labelsForGroupExist($group_id)
+    public function duplicateLabel($label, $group_id)
     {
         $query =
-            "SELECT *
+        "SELECT *
             FROM  cs_custom_topping_labels
-            WHERE topping_group_id = :groupid";
+            WHERE topping_group_id = :groupid
+            AND topping_label = " . $this->dbo->quote($label);
 
         $stmt = $this->dbo->prepare($query);
         $stmt->bindParam(':groupid', $group_id);
+        // $stmt->bindParam(':item', $item);
 
         $stmt->execute();
         $res = $stmt->fetchAll();
 
         if (count($res) > 0) {
-            return $res; // return the number of entries
+            // should have only one duplicate
+            // return $res[0]['topping_id'];
         } else {
             return -1;
         }
@@ -185,7 +157,9 @@ class ModsParser extends CSVParser
     public function insert()
     {
         $count = count($this->csv_data);
-
+        // print_r("<pre>");
+        // print_r($this->csv_data);
+        // print_r("</pre>");
         $topping_item = array(); // track type of modifier group, format: group name => type
 
         for ($i = 0; $i < $count; $i++) {
@@ -194,7 +168,6 @@ class ModsParser extends CSVParser
             $min           = $row['Min'];
             $max           = $row['Max'];
             $type          = $row['Type'];
-            $desc          = $row['Item Description'];
             $qty_item      = $row['Qty for 1 item'];
             $item          = $row['Item'];
             $price         = $row['Main Price'];
@@ -204,12 +177,10 @@ class ModsParser extends CSVParser
             $extra_mul     = $row['Extra Multiplied By'];
             $custom_labels = $row['Custom Labels'];
 
-            $main_pos  = $row['Main POS ID'];
-            $none_pos  = $row['None POS ID'];
-            $left_pos  = $row['Left POS ID'];
-            $right_pos = $row['Right POS ID'];
-            $whole_pos = $row['Whole POS ID'];
-            $extra_pos = $row['Extra POS ID'];
+            // escape string
+            // $name = $this->dbo->quote($name);
+            // $item = $this->dbo->quote($item);
+            // $type = $this->dbo->quote($type);
 
             $topping_item[$name] = $type;
             // format group type
@@ -227,10 +198,6 @@ class ModsParser extends CSVParser
                 $extra_mul = 1;
             } else {
                 $extra_mul = 0;
-            }
-
-            if (empty($price)) {
-                $price = 0;
             }
 
             // insert mod groups
@@ -286,29 +253,17 @@ class ModsParser extends CSVParser
                         (
                         `toppinggroupid`,
                         `toppingitemname`,
+                        `toppingitemprice`,
                         `sequence`,
-                        `allow_extra`,
-                        `description`,
-                        `pos_name`,
-                        `pos_name_none`,
-                        `pos_name_left`,
-                        `pos_name_right`,
-                        `pos_name_whole`,
-                        `pos_name_extra`
+                        `allow_extra`
                         )
                     VALUES
                         (
                         :groupid,
                     " . $this->dbo->quote($item) . ",
+                        :price,
                         :sequence,
-                        :extra_mul,
-                    " . $this->dbo->quote($description) . ",
-                    " . $this->dbo->quote($main_pos) . ",
-                    " . $this->dbo->quote($none_pos) . ",
-                    " . $this->dbo->quote($left_pos) . ",
-                    " . $this->dbo->quote($right_pos) . ",
-                    " . $this->dbo->quote($whole_pos) . ",
-                    " . $this->dbo->quote($extra_pos) . "
+                        :extra_mul
                         )
                     ";
 
@@ -318,39 +273,13 @@ class ModsParser extends CSVParser
 
                 $stmt->bindParam(':groupid', $group_id);
                 // $stmt->bindParam(':name', $item);
-                // $stmt->bindParam(':price', $price);
+                $stmt->bindParam(':price', $price);
                 $stmt->bindParam(':sequence', $sequence);
                 $stmt->bindParam(':extra_mul', $extra_mul);
 
                 $stmt->execute();
                 $this->inserted_item[] = $item;
-                $this->item_id[$item]  = $this->dbo->lastInsertId();
-            } else {
-                $this->item_id[$item] = $gate_check_item;
-                $item_id              = $this->item_id[$item];
-                $update_price         =
-                    "UPDATE cs_toppingitems
-                    SET toppingitemprice = $price
-                    WHERE topping_id = " . $item_id;
-                $this->dbo->query($update_price);
 
-                if (!in_array($item, $this->inserted_item)) {
-                    // update item description
-                    $update_item =
-                    "UPDATE cs_toppingitems
-                    SET description = " . $this->dbo->quote($item_desc) . ",
-                        pos_name = " . $this->dbo->quote($main_pos) . ",
-                        pos_name_none = " . $this->dbo->quote($none_pos) . ",
-                        pos_name_left = " . $this->dbo->quote($left_pos) . ",
-                        pos_name_right = " . $this->dbo->quote($right_pos) . ",
-                        pos_name_whole = " . $this->dbo->quote($whole_pos) . ",
-                        pos_name_extra = " . $this->dbo->quote($extra_pos) . "
-                    WHERE menuitemid = " . $this->item_id[$item];
-
-                    $this->dbo->query($update_item);
-                    $this->inserted_item[] = $item;
-
-                }
             }
 
             if ($topping_item[$name] == 'Custom' || $topping_item[$name] = 'Pizza') {
@@ -368,54 +297,44 @@ class ModsParser extends CSVParser
                     $stmt = $this->dbo->prepare($query);
                     $stmt->execute();
                 }
+
             }
 
             if ($topping_item[$name] == 'Custom') {
-                $labels            = explode(";", $custom_labels);
-                $labels_indb_array = $this->labelsForGroupExist($group_id);
-                $gate_check_label  = count($labels_indb_array);
-                if ($gate_check_label < 3) {
-                    foreach ($labels as $label) {
-                        $label = trim($label);
 
-                        // if no labels yet for current groups
+                $labels = explode(";", $custom_labels);
+
+                foreach ($labels as $label) {
+                    $label            = trim($label);
+                    $gate_check_label = $this->duplicateLabel($label, $group_id);
+                    if ($gate_check_label == -1) {
                         $query =
                         "INSERT INTO `cs_custom_topping_labels`
                             (
                             `topping_group_id`,
                             `topping_label`
                             )
-                            VALUES
-                                (
-                                :groupid,
-                            " . $this->dbo->quote($label) . "
-                                )
-                            ";
+                        VALUES
+                            (
+                            :groupid,
+                        " . $this->dbo->quote($label) . "
+                            )
+                        ";
 
                         $stmt = $this->dbo->prepare($query);
                         $stmt->bindParam(':groupid', $group_id);
 
                         $stmt->execute();
                     }
-                } elseif ($gate_check_label == 3) {
-                    foreach ($labels as $key => $value) {
-                        $label = trim($labels[$key]);
-                        echo $labels[$key];
-                        $update_label =
-                        "UPDATE cs_custom_topping_labels
-                            SET topping_label = " . $this->dbo->quote($label) . "
-                            WHERE topping_group_id = " . $group_id . "
-                            AND custom_topping_label_id = " . $labels_indb_array[$key]['custom_topping_label_id'];
-                        $this->dbo->query($update_label);
-                    }
+
                 }
+
             }
 
         }
 
+        print_r("<pre>");
+        print_r($this->group_id);
+        print_r("</pre>");
     }
-
-    // print_r("<pre>");
-    // print_r($this->group_id);
-    // print_r("</pre>");
 }

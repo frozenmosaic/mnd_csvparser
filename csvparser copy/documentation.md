@@ -16,4 +16,3 @@ The operation of this program follows these steps:
 1. No location will have duplicate menu groups.
 2. No menu groups will have duplicate menu categories. Thus, updating an existing menu group from an existing location is not permitted; class CSVParser will ignore new data in such case.
 3. No location will have duplicate modifier groups.
-
